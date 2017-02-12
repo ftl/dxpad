@@ -1,0 +1,170 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+representation of coordinates as grid square locators
+conversion between locators and latitude/longitude coordinates
+
+see https://en.wikipedia.org/wiki/Maidenhead_Locator_System
+see http://ham.stackexchange.com/questions/221/how-can-one-convert-from-lat-long-to-grid-square
+"""
+
+import sys, re, math
+
+import _location
+
+LOCATOR_EXPRESSION = re.compile(r'[A-R]{2}([0-9]{2}([a-x]{2})?)?', re.IGNORECASE)
+
+class Locator:
+	def __init__(self, locator):
+		self.locator = self.format_as_locator(locator)
+
+	@staticmethod
+	def is_valid_locator(locator):
+		return len(locator) >= 2 and len(locator) <= 6 and len(LOCATOR_EXPRESSION.findall(locator)) == 1
+
+	def format_as_locator(self, locator):
+		if not Locator.is_valid_locator(locator):
+			raise ValueError("{} is not a valid locator.".format(locator))
+		result = locator[0:2].upper()
+		if len(locator) > 2:
+			result += locator[2:4]
+		if len(locator) > 4:
+			result += locator[4:6].lower()
+		return result
+
+	def __str__(self):
+		return self.locator
+
+	def __hash__(self):
+		return hash(self.locator)
+
+	def __eq__(self, other):
+		return hash(self) == hash(other)
+
+	def distance_to(self, other):
+		return self.to_lat_lon().distance_to(other.to_lat_lon())
+
+	def bearing_to(self, other):
+		return self.to_lat_lon().bearing_to(other.to_lat_lon())
+
+	def bearing_from(self, other):
+		return self.to_lat_lon().bearing_from(other.to_lat_lon())
+
+	def to_lat_lon(self):
+		lon = (ord(self.locator[0]) - ord("A")) * 20.0
+		lat = (ord(self.locator[1]) - ord("A")) * 10.0
+		if len(self.locator) > 2:
+			lon += int(self.locator[2]) * 2.0
+			lat += int(self.locator[3])
+		if len(self.locator) > 4:
+			lon += (ord(self.locator[4]) - ord("a")) / 12.0
+			lat += (ord(self.locator[5]) - ord("a")) / 24.0
+
+		lon -= 180.0
+		lat -= 90.0
+
+		return _location.LatLon(lat, lon)
+
+	@staticmethod
+	def from_lat_lon(latlon, precision = 6):
+		lon = latlon.lon + 180.0
+		lat = latlon.lat + 90.0
+		field = chr(ord("A") + int(lon // 20)) + chr(ord("A") + int(lat // 10))
+		square = str(int((lon / 2) % 10)) + str(int(lat % 10))
+		subsquare = chr(ord("a") + int((lon - 2 * int(lon / 2)) * 12.0)) + chr(ord("a") + int((lat - int(lat)) * 24.0))
+		locator = field
+		if precision > 2: locator += square
+		if precision > 4: locator += subsquare
+		return Locator(locator)
+
+class LocatorHeatmap:
+	def __init__(self, max_heat = 20):
+		self.heatmap = {}
+		self.max_heat = max_heat
+
+	def add(self, locator, heat = 1):
+		coordinates = self._to_coordinates(locator)
+		self._add_heat(coordinates, heat)
+
+	def _to_coordinates(self, locator):
+		latlon = locator.to_lat_lon()
+		return _location.LatLon(int(latlon.lat), int(latlon.lon / 2) * 2)
+
+	def _add_heat(self, coordinates, heat):
+		current_heat = self._heat(coordinates)
+		new_heat = min(current_heat + heat, self.max_heat)
+		self.heatmap[coordinates] = new_heat
+		return new_heat
+
+	def _heat(self, coordinates):
+		if not coordinates in self.heatmap: return 0
+		return self.heatmap[coordinates]
+
+class LocatorHeatmap1:
+	def __init__(self, max_heat = 20, heat_propagation = 0.1, heat_threshold = 10):
+		self.heatmap = {}
+		self.max_heat = max_heat
+		self.heat_propagation = heat_propagation
+		self.heat_threshold = heat_threshold
+		self.add_count = 0
+
+	def add(self, locator, heat = 10):
+		self.add_count += 1
+		visited_cells = set()
+		next_cells = { self._to_coordinates(locator) : heat }
+		neighbours = {}
+		while len(next_cells) > 0:
+			coordinates, current_heat = next_cells.popitem()
+			visited_cells.add(coordinates)
+			new_heat = self._add_heat(coordinates, current_heat)
+			if new_heat > self.heat_threshold:
+				self._add_neighbours(coordinates, neighbours, visited_cells, next_cells, new_heat * self.heat_propagation)
+			if len(next_cells) == 0:
+				next_cells = neighbours
+				neighbours = {}
+
+	def _to_coordinates(self, locator):
+		latlon = locator.to_lat_lon()
+		return _location.LatLon(int(latlon.lat), int(latlon.lon / 2) * 2)
+
+	def _add_heat(self, coordinates, heat):
+		current_heat = self._heat(coordinates)
+		new_heat = min(current_heat + heat, self.max_heat)
+		self.heatmap[coordinates] = new_heat
+		return new_heat
+
+	def _heat(self, coordinates):
+		if not coordinates in self.heatmap: return 0
+		return self.heatmap[coordinates]
+
+	def _add_neighbours(self, coordinates, neighbours, visited_cells, next_cells, heat):
+		for candidate in coordinates.neighbours():
+			if candidate in neighbours:
+				neighbours[candidate] = max(neighbours[candidate], heat)
+			elif candidate not in visited_cells and candidate not in next_cells:
+				neighbours[candidate] = heat
+		return neighbours
+
+def main(args):
+	if Locator.is_valid_locator(args[1]):
+		locator = Locator(args[1])
+		latlon = locator.to_lat_lon()
+		if len(args) > 2 and Locator.is_valid_locator(args[2]):
+			locator2 = Locator(args[2])
+			distance = locator.distance_to(locator2)
+			bearing_to = locator.bearing_to(locator2)
+			bearing_from = locator.bearing_from(locator2)
+			print("{!s} -> {!s}: {:.0f}km".format(locator, locator2, distance))
+			print("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_to))
+			print("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_from))
+			print("{!s} == {!s}: {}".format(locator, locator2, str(locator == locator2)))
+	else:
+		lat = float(args[1])
+		lon = float(args[2])
+		latlon = _location.LatLon(lat, lon)
+		locator = Locator.from_lat_lon(latlon)
+
+	print("{!s} = {!s}".format(locator, latlon))
+
+if __name__ == "__main__": main(sys.argv)
