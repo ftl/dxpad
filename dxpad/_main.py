@@ -52,6 +52,7 @@ def main(args):
 	dxcc = _dxcc.DXCC()
 	dxcc.load()
 	bandmap = _bandmap.BandMap(dxcc)
+	map = _map.Map(dxcc, bandmap)
 	notepad = _notepad.Notepad()
 	entry_line = _entry.EntryLine(notepad)
 	callbooks = []
@@ -64,7 +65,7 @@ def main(args):
 
 	main_window = MainWindow(app, entry_line, notepad, infohub)
 	bandmap_window = _bandmap.BandmapWindow(bandmap)
-	map_window = _map.MapWindow(dxcc, bandmap)
+	map_window = _map.MapWindow(map)
 
 	window_manager.add_window(main_window)
 	window_manager.add_window(bandmap_window)
