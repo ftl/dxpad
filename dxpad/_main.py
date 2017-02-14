@@ -66,6 +66,7 @@ def main(args):
 	main_window = MainWindow(app, entry_line, notepad, infohub)
 	bandmap_window = _bandmap.BandmapWindow(bandmap)
 	map_window = _map.MapWindow(map)
+	map.highlight_locator(config.locator)
 
 	window_manager.add_window(main_window)
 	window_manager.add_window(bandmap_window)

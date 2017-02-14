@@ -171,7 +171,7 @@ class MapWidget(QtGui.QWidget):
             self._draw_highlighted_locator(painter, locator)
 
     def _draw_highlighted_locator(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
-        r = 1.0
+        r = 2.0
         latlon = locator.to_lat_lon()
         painter.setOpacity(opacity)
         painter.setPen(color)
