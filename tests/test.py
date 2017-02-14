@@ -9,6 +9,7 @@ import dxpad._grid as _grid
 import dxpad._notepad as _notepad
 import dxpad._callinfo as _callinfo
 
+
 class TestLatLon(unittest.TestCase):
 	def test_neighbours_somewhere_in_the_middle(self):
 		lat_lon = _location.LatLon(48, 10)
@@ -108,64 +109,6 @@ class TestLatLon(unittest.TestCase):
 					hashes.add(lat_lon)
 		self.assertEqual(len(conflicts), 0, "{} conflicting {}".format(len(hashes), len(conflicts)))
 
-class TestLocatorHeatmap1(unittest.TestCase):
-	def test_left_end_add_once(self):
-		self.maxDiff = None
-		heatmap = _grid.LocatorHeatmap1(max_heat = 20, heat_propagation = 0.5, heat_threshold = 5)
-		heatmap.add(_grid.Locator("AN00aa"))
-		self.assertItemsEqual( heatmap.heatmap.keys(),
-			[
-				_location.LatLon(41, 178),
-				_location.LatLon(41, -180),
-				_location.LatLon(41, -178),
-				_location.LatLon(40, 178),
-				_location.LatLon(40, -180),
-				_location.LatLon(40, -178),
-				_location.LatLon(39, 178),
-				_location.LatLon(39, -180),
-				_location.LatLon(39, -178)
-			] 
-		)
-
-	def test_left_end_add_twice(self):
-		self.maxDiff = None
-		heatmap = _grid.LocatorHeatmap1(max_heat = 20, heat_propagation = 0.5, heat_threshold = 9)
-		heatmap.add(_grid.Locator("AN00aa"))
-		heatmap.add(_grid.Locator("AN00aa"))
-		#print "\n".join(map(lambda l: str(l), heatmap.heatmap.keys()))
-		self.assertItemsEqual( heatmap.heatmap.keys(),
-			[
-				_location.LatLon(42, 176),
-				_location.LatLon(42, 178),
-				_location.LatLon(42, -180),
-				_location.LatLon(42, -178),
-				_location.LatLon(42, -176),
-
-				_location.LatLon(41, 176),
-				_location.LatLon(41, 178),
-				_location.LatLon(41, -180),
-				_location.LatLon(41, -178),
-				_location.LatLon(41, -176),
-				
-				_location.LatLon(40, 176),
-				_location.LatLon(40, 178),
-				_location.LatLon(40, -180),
-				_location.LatLon(40, -178),
-				_location.LatLon(40, -176),
-				
-				_location.LatLon(39, 176),
-				_location.LatLon(39, 178),
-				_location.LatLon(39, -180),
-				_location.LatLon(39, -178),
-				_location.LatLon(39, -176),
-				
-				_location.LatLon(38, 176),
-				_location.LatLon(38, 178),
-				_location.LatLon(38, -180),
-				_location.LatLon(38, -178),
-				_location.LatLon(38, -176)
-			] 
-		)
 
 class TestNotedQsos(unittest.TestCase):
 	def setUp(self):

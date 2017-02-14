@@ -25,6 +25,30 @@ remove_marker(LatLon, kind)
 
 HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
 
+class LocatorHeatmap:
+    def __init__(self, max_heat = 20):
+        self.heatmap = {}
+        self.max_heat = max_heat
+
+    def add(self, locator, heat = 1):
+        coordinates = self._to_coordinates(locator)
+        self._add_heat(coordinates, heat)
+
+    def _to_coordinates(self, locator):
+        latlon = locator.to_lat_lon()
+        return _location.LatLon(int(latlon.lat), int(latlon.lon / 2) * 2)
+
+    def _add_heat(self, coordinates, heat):
+        current_heat = self._heat(coordinates)
+        new_heat = min(current_heat + heat, self.max_heat)
+        self.heatmap[coordinates] = new_heat
+        return new_heat
+
+    def _heat(self, coordinates):
+        if not coordinates in self.heatmap: return 0
+        return self.heatmap[coordinates]
+
+
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
 
@@ -36,7 +60,7 @@ class Map(QtCore.QObject):
         self.grid_visible = True
         self.grayline_visible = True
         self.highlighted_locators = []
-        self.locator_heatmap = _grid.LocatorHeatmap()
+        self.locator_heatmap = LocatorHeatmap()
         self.bandmap.update_spots.connect(self._highlight_spots)
 
     @QtCore.Slot(bool)
@@ -72,7 +96,7 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def _highlight_spots(self, spots):
-        locator_heatmap = _grid.LocatorHeatmap()
+        locator_heatmap = LocatorHeatmap()
         for spot in spots:
             info = self.dxcc.find_dxcc_info(spot.call)
             if not info: continue
