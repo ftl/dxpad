@@ -254,7 +254,7 @@ if __name__ == "__main__":
 	config = _config.load_config()
 
 	dxcc = _dxcc.DXCC()
-	dxcc.load_from_file("cty.dat")
+	dxcc.load()
 	bandmap = BandMap(dxcc)
 
 	wid = BandmapWindow(bandmap)

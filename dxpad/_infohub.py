@@ -240,7 +240,7 @@ def main(args):
 
 	config = _config.load_config()
 	dxcc = _dxcc.DXCC()
-	dxcc.load_from_file("cty.dat")
+	dxcc.load()
 	hamqth = _hamqth.AsyncHamQTH(config.hamqth.user, config.hamqth.password)
 	qrz = _qrz.AsyncQrz(config.qrz.user, config.qrz.password)
 	infohub = Infohub(dxcc, [hamqth, qrz], config)

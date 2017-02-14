@@ -50,7 +50,7 @@ def main(args):
 	window_manager = _windowmanager.WindowManager()
 
 	dxcc = _dxcc.DXCC()
-	dxcc.load_from_file("cty.dat")
+	dxcc.load()
 	bandmap = _bandmap.BandMap(dxcc)
 	notepad = _notepad.Notepad()
 	entry_line = _entry.EntryLine(notepad)

@@ -235,7 +235,7 @@ def main(args):
         map_widget.highlight_locator(_grid.Locator(arg))
 
     dxcc = _dxcc.DXCC()
-    dxcc.load_from_file("cty.dat")
+    dxcc.load()
     bandmap = _bandmap.BandMap(dxcc)
 
     win = MapWindow(dxcc, bandmap)
