@@ -25,10 +25,11 @@ remove_marker(LatLon, kind)
 
 HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
 
-class MapWidget(QtGui.QWidget):
+class Map(QtCore.QObject):
+    changed = QtCore.Signal()
+
     def __init__(self, parent = None):
-        QtGui.QWidget.__init__(self, parent)
-        self.map = QtSvg.QGraphicsSvgItem(os.path.join(os.path.dirname(os.path.abspath(__file__)), "map.svg"))
+        QtCore.QObject.__init__(self, parent)
         self.map_visible = True
         self.grid_visible = True
         self.grayline_visible = True
@@ -38,45 +39,53 @@ class MapWidget(QtGui.QWidget):
     @QtCore.Slot(bool)
     def show_map(self, state):
         self.map_visible = state
-        self.repaint()
+        self.changed.emit()
 
     @QtCore.Slot(bool)
     def show_grid(self, state):
         self.grid_visible = state
-        self.repaint()
+        self.changed.emit()
 
     @QtCore.Slot(bool)
     def show_grayline(self, state):
         self.grayline_visible = state
-        self.repaint()
+        self.changed.emit()
 
     def highlight_locator(self, locator):
         self.highlighted_locators.append(locator)
-        self.repaint()
+        self.changed.emit()
 
     def highlight_locators(self, locators):
         self.highlighted_locators = locators
-        self.repaint()
+        self.changed.emit()
 
     def clear_locator(self, locator):
         self.highlighted_locators.remove(locator)
-        self.repaint()
+        self.changed.emit()
 
     def clear_all_locators(self):
         self.highlighted_locators = []
-        self.repaint()
+        self.changed.emit()
 
     def add_heat(self, locator, heat = 10):
         self.locator_heatmap.add(locator, heat)
-        self.repaint()
+        self.changed.emit()
 
     def set_heat(self, locator_heatmap):
         self.locator_heatmap = locator_heatmap
-        self.repaint()
+        self.changed.emit()
 
     def clear_heatmap(self):
         self.locator_heatmap = _grid.LocatorHeatmap()
-        self.repaint()
+        self.changed.emit()
+
+
+class MapWidget(QtGui.QWidget):
+    def __init__(self, map, parent = None):
+        QtGui.QWidget.__init__(self, parent)
+        self.map = map
+        self.map.changed.connect(self.repaint)
+        self.world_graphic = QtSvg.QGraphicsSvgItem(os.path.join(os.path.dirname(os.path.abspath(__file__)), "map.svg"))
 
     def paintEvent(self, event):
         painter = QtGui.QPainter()
@@ -100,20 +109,20 @@ class MapWidget(QtGui.QWidget):
 
         painter.translate(box.x(), box.y())
         painter.scale(float(size.width() / 360.0), float(size.height() / 180.0))
-        if self.map_visible:
+        if self.map.map_visible:
             self._draw_map(painter)
 
         painter.translate(180, 90)
         painter.scale(1, -1)
-        if self.grid_visible:
+        if self.map.grid_visible:
             self._draw_grid(painter)
-        if self.grayline_visible:
+        if self.map.grayline_visible:
             self._draw_grayline(painter)
         self._draw_highlighted_locators(painter)
         self._draw_locator_heatmap(painter)
 
     def _draw_map(self, painter):
-        self.map.paint(painter, QtGui.QStyleOptionGraphicsItem())
+        self.world_graphic.paint(painter, QtGui.QStyleOptionGraphicsItem())
 
     def _draw_grid(self, painter):
         painter.setOpacity(0.5)
@@ -134,12 +143,12 @@ class MapWidget(QtGui.QWidget):
         painter.drawPolygon(polygon)
 
     def _draw_highlighted_locators(self, painter):
-        for locator in self.highlighted_locators:
+        for locator in self.map.highlighted_locators:
             self._draw_locator(painter, locator)
 
     def _draw_locator_heatmap(self, painter):
-        for latlon in self.locator_heatmap.heatmap:
-            heat = float(self.locator_heatmap.heatmap[latlon]) / float(self.locator_heatmap.max_heat)
+        for latlon in self.map.locator_heatmap.heatmap:
+            heat = float(self.map.locator_heatmap.heatmap[latlon]) / float(self.map.locator_heatmap.max_heat)
             self._draw_lat_lon(painter, latlon, color = self._heat_color(heat), opacity = 0.5 * heat + 0.5)
 
     def _draw_locator(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
@@ -173,30 +182,31 @@ class MapWidget(QtGui.QWidget):
         return QtGui.QColor(result[0], result[1], result[2])
 
 class MapWindow(_windowmanager.ManagedWindow):
-    def __init__(self, dxcc, bandmap, parent = None):
+    def __init__(self, dxcc, bandmap, map, parent = None):
         _windowmanager.ManagedWindow.__init__(self, parent)
         self.setObjectName("map")
         self.setWindowTitle("Map")
         self.resize(1200, 600)
         self.dxcc = dxcc
         self.bandmap = bandmap
+        self.map = map
 
-        self.map_widget = MapWidget()
+        self.map_widget = MapWidget(map)
 
         show_map = QtGui.QCheckBox()
         show_map.setText("Karte")
-        show_map.setCheckState(QtCore.Qt.Checked if self.map_widget.map_visible else QtCore.Qt.Unchecked)
-        show_map.stateChanged.connect(self.map_widget.show_map)
+        show_map.setCheckState(QtCore.Qt.Checked if self.map.map_visible else QtCore.Qt.Unchecked)
+        show_map.stateChanged.connect(self.map.show_map)
 
         show_grid = QtGui.QCheckBox()
         show_grid.setText("Locator-Gitter")
-        show_grid.setCheckState(QtCore.Qt.Checked if self.map_widget.grid_visible else QtCore.Qt.Unchecked)
-        show_grid.stateChanged.connect(self.map_widget.show_grid)
+        show_grid.setCheckState(QtCore.Qt.Checked if self.map.grid_visible else QtCore.Qt.Unchecked)
+        show_grid.stateChanged.connect(self.map.show_grid)
 
         show_grayline = QtGui.QCheckBox()
         show_grayline.setText("Tag/Nacht-Grenze")
-        show_grayline.setCheckState(QtCore.Qt.Checked if self.map_widget.grayline_visible else QtCore.Qt.Unchecked)
-        show_grayline.stateChanged.connect(self.map_widget.show_grayline)
+        show_grayline.setCheckState(QtCore.Qt.Checked if self.map.grayline_visible else QtCore.Qt.Unchecked)
+        show_grayline.stateChanged.connect(self.map.show_grayline)
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(show_map)
@@ -218,7 +228,7 @@ class MapWindow(_windowmanager.ManagedWindow):
             if not info: continue
             locator = _grid.Locator.from_lat_lon(info.latlon)
             heatmap.add(locator, 1)
-        self.map_widget.set_heat(heatmap)
+        self.map.set_heat(heatmap)
 
 
 def highlight_spot(map_widget):    
@@ -237,12 +247,13 @@ def main(args):
     dxcc = _dxcc.DXCC()
     dxcc.load()
     bandmap = _bandmap.BandMap(dxcc)
+    map = Map()
 
-    win = MapWindow(dxcc, bandmap)
+    win = MapWindow(dxcc, bandmap, map)
     win.show()
 
-    clusters = config.clusters
-    spotting_file = None #"rbn.txt"
+    clusters = [] #config.clusters
+    spotting_file = "../rbn.txt"
 
     spotting_threads = []
     for c in clusters:
