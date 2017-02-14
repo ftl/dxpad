@@ -228,14 +228,14 @@ class _NotepadPainter:
         self.size = widget.size()
         self.line_height = painter.fontMetrics().boundingRect("Hg").height() + 2
         self.visible_lines = (self.size.height() - 2) / self.line_height
-        self.timestamp_column_right = self.text_width(" 0000Z")
-        self.divider_line_x = self.timestamp_column_right + 5
-        self.content_column_left = self.timestamp_column_right + 10
+        self.timestamp_column_right = self.text_width("MMMMZ")
+        self.divider_line_x = self.timestamp_column_right + 2
+        self.content_column_left = self.timestamp_column_right + 4
         self.clip_visible_lines_rect = QtCore.QRect(0, 1, self.size.width(), self.visible_lines * self.line_height)
         self.clip_all_rect = QtCore.QRect(0, 0, self.size.width(), self.size.height())
 
     def text_width(self, text):
-        return self.painter.fontMetrics().boundingRect(text).width()
+        return self.painter.fontMetrics().width(text)
 
     def content_line_rect(self, line_index):
         return QtCore.QRect(self.content_column_left, self.line_top(line_index), self.size.width() - self.content_column_left - 1, self.line_height)
@@ -283,7 +283,7 @@ class _NotepadPainter:
         for section in sections:
             section_rect = self.painter.fontMetrics().boundingRect(section.content)
             section_rect.moveTo(x, y)
-            section_rect.setWidth(self.painter.fontMetrics().width(section.content))
+            section_rect.setWidth(self.text_width(section.content))
             if section.kind in text_colors:
                 text_color = text_colors[section.kind]
             else:
@@ -374,9 +374,6 @@ class _PlainNotepadWidget(QtGui.QWidget):
         self.visible_lines = notepad_painter.visible_lines
         if self.visible_lines != last_visible_lines:
             self.update_visible_lines.emit(self.visible_lines)
-
-    def _text_width(self, painter, text):
-        return painter.fontMetrics().boundingRect(text).width()
 
     def mousePressEvent(self, e):
         if self.line_height <= 0: 
@@ -481,7 +478,8 @@ class NotepadWindow(QtGui.QWidget):
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.notepad_widget)
         vbox.addWidget(self.line)
-
+        self.setLayout(vbox)
+        
         self.setWindowTitle("Notepad")
 
     def add_line_to_notepad(self):        
