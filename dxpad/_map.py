@@ -78,18 +78,17 @@ class Map(QtCore.QObject):
         self.grayline_visible = state
         self.changed.emit()
 
+    @QtCore.Slot(object)
     def highlight_locator(self, locator):
         self.highlighted_locators.append(locator)
         self.changed.emit()
 
-    def highlight_locators(self, locators):
-        self.highlighted_locators = locators
-        self.changed.emit()
-
+    @QtCore.Slot(object)
     def clear_locator(self, locator):
         self.highlighted_locators.remove(locator)
         self.changed.emit()
 
+    @QtCore.Slot()
     def clear_all_locators(self):
         self.highlighted_locators = []
         self.changed.emit()
@@ -143,8 +142,8 @@ class MapWidget(QtGui.QWidget):
             self._draw_grid(painter)
         if self.map.grayline_visible:
             self._draw_grayline(painter)
-        self._draw_highlighted_locators(painter)
         self._draw_locator_heatmap(painter)
+        self._draw_highlighted_locators(painter)
 
     def _draw_map(self, painter):
         self.world_graphic.paint(painter, QtGui.QStyleOptionGraphicsItem())
@@ -169,14 +168,17 @@ class MapWidget(QtGui.QWidget):
 
     def _draw_highlighted_locators(self, painter):
         for locator in self.map.highlighted_locators:
-            self._draw_locator(painter, locator)
+            self._draw_highlighted_locator(painter, locator)
 
-    def _draw_locator_heatmap(self, painter):
-        for latlon in self.map.locator_heatmap.heatmap:
-            heat = float(self.map.locator_heatmap.heatmap[latlon]) / float(self.map.locator_heatmap.max_heat)
-            self._draw_lat_lon(painter, latlon, color = self._heat_color(heat), opacity = 0.5 * heat + 0.5)
+    def _draw_highlighted_locator(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
+        r = 1.0
+        latlon = locator.to_lat_lon()
+        painter.setOpacity(opacity)
+        painter.setPen(color)
+        painter.drawLine(latlon.lon - r, latlon.lat - r, latlon.lon + r, latlon.lat + r)
+        painter.drawLine(latlon.lon - r, latlon.lat + r, latlon.lon + r, latlon.lat - r)
 
-    def _draw_locator(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
+    def _draw_locator_field(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
         latlon = locator.to_lat_lon()
         precision = len(str(locator))
         if precision >= 6:
@@ -189,6 +191,11 @@ class MapWidget(QtGui.QWidget):
             width = 20
             height = 10
         self._draw_lat_lon(painter, latlon, width, height, color, opacity)
+
+    def _draw_locator_heatmap(self, painter):
+        for latlon in self.map.locator_heatmap.heatmap:
+            heat = float(self.map.locator_heatmap.heatmap[latlon]) / float(self.map.locator_heatmap.max_heat)
+            self._draw_lat_lon(painter, latlon, color = self._heat_color(heat), opacity = 0.5 * heat + 0.5)
 
     def _draw_lat_lon(self, painter, latlon, width = 2, height = 1, color = QtGui.QColor(255, 0, 0), opacity = 1):
         rect = QtCore.QRectF(latlon.lon, latlon.lat, width, height)
@@ -262,6 +269,7 @@ def main(args):
     dxcc.load()
     bandmap = _bandmap.BandMap(dxcc)
     map = Map(dxcc, bandmap)
+    map.highlight_locator(config.locator)
 
     win = MapWindow(map)
     win.show()
