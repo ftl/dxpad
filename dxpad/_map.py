@@ -28,13 +28,16 @@ HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
 
-    def __init__(self, parent = None):
+    def __init__(self, dxcc, bandmap, parent = None):
         QtCore.QObject.__init__(self, parent)
+        self.dxcc = dxcc
+        self.bandmap = bandmap
         self.map_visible = True
         self.grid_visible = True
         self.grayline_visible = True
         self.highlighted_locators = []
         self.locator_heatmap = _grid.LocatorHeatmap()
+        self.bandmap.update_spots.connect(self._highlight_spots)
 
     @QtCore.Slot(bool)
     def show_map(self, state):
@@ -67,18 +70,16 @@ class Map(QtCore.QObject):
         self.highlighted_locators = []
         self.changed.emit()
 
-    def add_heat(self, locator, heat = 10):
-        self.locator_heatmap.add(locator, heat)
-        self.changed.emit()
-
-    def set_heat(self, locator_heatmap):
+    @QtCore.Slot(object)
+    def _highlight_spots(self, spots):
+        locator_heatmap = _grid.LocatorHeatmap()
+        for spot in spots:
+            info = self.dxcc.find_dxcc_info(spot.call)
+            if not info: continue
+            locator = _grid.Locator.from_lat_lon(info.latlon)
+            locator_heatmap.add(locator, 1)
         self.locator_heatmap = locator_heatmap
         self.changed.emit()
-
-    def clear_heatmap(self):
-        self.locator_heatmap = _grid.LocatorHeatmap()
-        self.changed.emit()
-
 
 class MapWidget(QtGui.QWidget):
     def __init__(self, map, parent = None):
@@ -181,14 +182,13 @@ class MapWidget(QtGui.QWidget):
             result.append((1 - p) * lower[i] + p * upper[i])
         return QtGui.QColor(result[0], result[1], result[2])
 
+
 class MapWindow(_windowmanager.ManagedWindow):
-    def __init__(self, dxcc, bandmap, map, parent = None):
+    def __init__(self, map, parent = None):
         _windowmanager.ManagedWindow.__init__(self, parent)
         self.setObjectName("map")
         self.setWindowTitle("Map")
         self.resize(1200, 600)
-        self.dxcc = dxcc
-        self.bandmap = bandmap
         self.map = map
 
         self.map_widget = MapWidget(map)
@@ -219,22 +219,12 @@ class MapWindow(_windowmanager.ManagedWindow):
 
         self.setLayout(vbox)
 
-        self.bandmap.update_spots.connect(self._highlight_spots)
-
-    def _highlight_spots(self, spots):
-        heatmap = _grid.LocatorHeatmap()
-        for spot in spots:
-            info = self.dxcc.find_dxcc_info(spot.call)
-            if not info: continue
-            locator = _grid.Locator.from_lat_lon(info.latlon)
-            heatmap.add(locator, 1)
-        self.map.set_heat(heatmap)
-
 
 def highlight_spot(map_widget):    
     map_widget.locator_heatmap.add(_grid.Locator("AN00aa"))
     map_widget.locator_heatmap.add(_grid.Locator("CN50kk"))
     map_widget.repaint()
+
 
 def main(args):
     app = QtGui.QApplication(args)
@@ -247,9 +237,9 @@ def main(args):
     dxcc = _dxcc.DXCC()
     dxcc.load()
     bandmap = _bandmap.BandMap(dxcc)
-    map = Map()
+    map = Map(dxcc, bandmap)
 
-    win = MapWindow(dxcc, bandmap, map)
+    win = MapWindow(map)
     win.show()
 
     clusters = [] #config.clusters
