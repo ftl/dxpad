@@ -143,8 +143,10 @@ class DetailedBandmap(QtGui.QWidget):
 		bandmap_painter = DetailedBandmapPainter(painter, self)
 		bandmap_painter.draw_frequency_box(COLOR_BACKGROUND)
 
-		bandmap_painter.draw_left_label("{:<8.1f} kHz".format(self.from_kHz), COLOR_BAND)
-		bandmap_painter.draw_right_label("{:>8.1f} kHz".format(self.to_kHz), COLOR_BAND)
+		for f in range(int(self.from_kHz), int(self.to_kHz) + 1, 1):
+			bandmap_painter.draw_scale_tick(f, COLOR_BAND)
+			if (f % 10) == 0:
+				bandmap_painter.draw_frequency_label(f, COLOR_BAND)
 
 		for spot in self.spots:
 			bandmap_painter.mark_frequency(spot.frequency, COLOR_SPOT)
@@ -175,13 +177,24 @@ class DetailedBandmapPainter:
 	def draw_frequency_box(self, color):
 		self.painter.fillRect(self.frequency_box, color)
 
-	def draw_left_label(self, text, color):
+	def draw_scale_tick(self, frequency, color):
+		x = self.frequency_x(frequency)
+		y = self.frequency_box.top() + self.frequency_box.height()
+		l = 10 if (frequency % 10) == 0 else 7 if (frequency % 5) == 0 else 3
 		self.painter.setPen(color)
-		self.painter.drawText(0, self.size.height() - 1, text)
+		self.painter.drawLine(x, y, x, y + l)
 
-	def draw_right_label(self, text, color):
+	def draw_frequency_label(self, frequency, color):
+		text = "{:<8.1f}".format(frequency)
+		frequency_x = self.frequency_x(frequency)	
+		width = self.text_width(text)
+		height = self.text_height
+		x = frequency_x - width / 2
+		y = self.size.height() - 1
+		if x < 0: return
+		if x + width > self.frequency_box.width(): return
 		self.painter.setPen(color)
-		self.painter.drawText(self.size.width() - self.text_width(text), self.size.height() - 1, text)
+		self.painter.drawText(x, y, text) 
 
 	def mark_frequency(self, frequency, color):
 		x = self.frequency_x(frequency)
