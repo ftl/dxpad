@@ -173,7 +173,7 @@ class SpotAggregator(QtCore.QObject):
 		self.timer = QtCore.QTimer(self)
 		self.timer.timeout.connect(self.tick)
 		self.timer.start(1000)
-		self.spot_timeout = 60
+		self.spot_timeout = 300
 		self.spotting_threads = []
 
 	@QtCore.Slot(object)
