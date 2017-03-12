@@ -26,9 +26,11 @@ remove_marker(LatLon, kind)
 HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
 
 class LocatorHeatmap:
-    def __init__(self, max_heat = 20):
+    def __init__(self, max_heat = 20, cell_width = 2, cell_height = 1):
         self.heatmap = {}
         self.max_heat = max_heat
+        self.cell_width = cell_width
+        self.cell_height = cell_height
 
     def add(self, locator, heat = 1):
         coordinates = self._to_coordinates(locator)
@@ -36,7 +38,7 @@ class LocatorHeatmap:
 
     def _to_coordinates(self, locator):
         latlon = locator.to_lat_lon()
-        return _location.LatLon(int(latlon.lat), int(latlon.lon / 2) * 2)
+        return _location.LatLon(int(latlon.lat) - int(latlon.lat) % self.cell_height, int(latlon.lon) - int(latlon.lon) % self.cell_width)
 
     def _add_heat(self, coordinates, heat):
         current_heat = self._heat(coordinates)
@@ -48,17 +50,18 @@ class LocatorHeatmap:
         if not coordinates in self.heatmap: return 0
         return self.heatmap[coordinates]
 
-
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
 
-    def __init__(self, parent = None):
+    def __init__(self, spot_cell_width = 5, spot_cell_height = 5, parent = None):
         QtCore.QObject.__init__(self, parent)
+        self.spot_cell_width = spot_cell_width
+        self.spot_cell_height = spot_cell_height
         self.map_visible = True
         self.grid_visible = True
         self.grayline_visible = True
         self.highlighted_locators = []
-        self.locator_heatmap = LocatorHeatmap()
+        self.locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
         self.band = _bandplan.IARU_REGION_1[5]
         self.spotter_continents = ["EU"]
 
@@ -94,7 +97,7 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def highlight_spots(self, spots):
-        locator_heatmap = LocatorHeatmap()
+        locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
         for spot in filter(self._filter_spot, spots):
             if not spot.dxcc_info:
                 print str(spot) 
@@ -201,9 +204,10 @@ class MapWidget(QtGui.QWidget):
         self._draw_lat_lon(painter, latlon, width, height, color, opacity)
 
     def _draw_locator_heatmap(self, painter):
-        for latlon in self.map.locator_heatmap.heatmap:
+        heatmap = self.map.locator_heatmap
+        for latlon in heatmap.heatmap:
             heat = float(self.map.locator_heatmap.heatmap[latlon]) / float(self.map.locator_heatmap.max_heat)
-            self._draw_lat_lon(painter, latlon, color = self._heat_color(heat), opacity = 0.5 * heat + 0.5)
+            self._draw_lat_lon(painter, latlon, width = heatmap.cell_width, height = heatmap.cell_height, color = self._heat_color(heat), opacity = 0.4)
 
     def _draw_lat_lon(self, painter, latlon, width = 2, height = 1, color = QtGui.QColor(255, 0, 0), opacity = 1):
         rect = QtCore.QRectF(latlon.lon, latlon.lat, width, height)
