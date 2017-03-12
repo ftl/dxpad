@@ -22,81 +22,21 @@ COLOR_PORTION = {
 	"FM": COLOR_FM_PORTION
 }
 
-class Spot:
-	def __init__(self, call, frequency):
-		self.call = call
-		self.frequency = frequency
-		self.sources = set([])
-		self.lastseen = 0
-
-	def __str__(self):
-		return "{0:<10} on {1:>8.1f} kHz, age {2:3.0f}, sources: {3:>2.0f}".format(self.call, self.frequency, time.time() - self.lastseen, len(self.sources))
-
-
 class BandMap(QtCore.QObject):
 	update_spots = QtCore.Signal(object)
 
-	def __init__(self, dxcc, parent = None):
+	def __init__(self, parent = None):
 		QtCore.QObject.__init__(self, parent)
-		self.dxcc = dxcc
-		self.spots = {}
+		self.spots = []
 		self.spotter_continents = ["EU"]
-		self.timer = QtCore.QTimer(self)
-		self.timer.timeout.connect(self.tick)
-		self.timer.start(1000)
 
 	@QtCore.Slot(object)
-	def spot_received(self, incoming_spot):
-		if not self._filter_spot(incoming_spot): return
-
-		if incoming_spot.call in self.spots:
-			spots_by_call = self.spots[incoming_spot.call]
-			spot = None
-			for s in spots_by_call:
-				if abs(s.frequency - incoming_spot.frequency) <= 2:
-					spot = s
-					break
-
-			if not spot:
-				spot = Spot(incoming_spot.call, incoming_spot.frequency)
-				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid))
-				spot.lastseen = incoming_spot.time
-				spots_by_call.append(spot)
-			else:
-				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid))
-				spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
-				spot.lastseen = incoming_spot.time
-
-		else:
-			spot = Spot(incoming_spot.call, incoming_spot.frequency)
-			spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid))
-			spot.lastseen = incoming_spot.time
-			spots_by_call = [spot]
-
-		self.spots[incoming_spot.call] = spots_by_call
+	def spots_received(self, spots):
+		self.spots = filter(self._filter_spot, spots)
+		self.update_spots.emit(self.spots)
 
 	def _filter_spot(self, spot):
-		dxcc_info = self.dxcc.find_dxcc_info(spot.source_call)
-		if not dxcc_info: return False
-		if not dxcc_info.continent in self.spotter_continents: return False
 		return True
-
-	@QtCore.Slot()
-	def tick(self):
-		now = time.time()
-		spots = {}
-		bandmap = []
-		for call in self.spots.keys():
-			spots_by_call = filter(lambda spot: now - spot.lastseen <= 60, self.spots[call])
-			if len(spots_by_call) > 0:
-				spots[call] = spots_by_call
-				bandmap.extend(spots_by_call)
-
-		self.spots = spots
-		bandmap = sorted(bandmap, key= lambda spot: spot.frequency)
-
-		self.update_spots.emit(bandmap)
-
 
 class OverviewBandmap(QtGui.QWidget):	
 	def __init__(self, parent = None):
@@ -329,34 +269,21 @@ if __name__ == "__main__":
 
 	dxcc = _dxcc.DXCC()
 	dxcc.load()
-	bandmap = BandMap(dxcc)
+	aggregator = _spotting.SpotAggregator(dxcc)
+	bandmap = BandMap()
 
 	wid = BandmapWindow(bandmap)
 	wid.resize(1000, 300)
 	wid.show()
 
+	aggregator.update_spots.connect(bandmap.spots_received)
 	bandmap.update_spots.connect(print_bandmap)
 
 	clusters = config.clusters
 	spotting_file = None #"rbn.txt"
-
-	spotting_threads = []
-	for c in clusters:
-		st = _spotting.SpottingThread.telnet(c.host, c.port, c.user, c.password)
-		st.spot_received.connect(bandmap.spot_received)
-		st.start()
-		spotting_threads.append(st)
-
-	if spotting_file:
-		st = _spotting.SpottingThread.textfile(spotting_file)
-		st.spot_received.connect(bandmap.spot_received)
-		st.start()
-		spotting_threads.append(st)
+	aggregator.start_spotting(clusters, spotting_file)
 
 	result = app.exec_()
 	
-	for st in spotting_threads:
-		st.stop()
-		st.wait()
-
+	aggregator.stop_spotting()
 	sys.exit(result)

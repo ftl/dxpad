@@ -52,16 +52,13 @@ class LocatorHeatmap:
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
 
-    def __init__(self, dxcc, bandmap, parent = None):
+    def __init__(self, parent = None):
         QtCore.QObject.__init__(self, parent)
-        self.dxcc = dxcc
-        self.bandmap = bandmap
         self.map_visible = True
         self.grid_visible = True
         self.grayline_visible = True
         self.highlighted_locators = []
         self.locator_heatmap = LocatorHeatmap()
-        self.bandmap.update_spots.connect(self._highlight_spots)
 
     @QtCore.Slot(bool)
     def show_map(self, state):
@@ -94,12 +91,13 @@ class Map(QtCore.QObject):
         self.changed.emit()
 
     @QtCore.Slot(object)
-    def _highlight_spots(self, spots):
+    def highlight_spots(self, spots):
         locator_heatmap = LocatorHeatmap()
         for spot in spots:
-            info = self.dxcc.find_dxcc_info(spot.call)
-            if not info: continue
-            locator = _grid.Locator.from_lat_lon(info.latlon)
+            if not spot.dxcc_info:
+                print str(spot) 
+                continue
+            locator = _grid.Locator.from_lat_lon(spot.dxcc_info.latlon)
             locator_heatmap.add(locator, 1)
         self.locator_heatmap = locator_heatmap
         self.changed.emit()
@@ -270,35 +268,22 @@ def main(args):
 
     dxcc = _dxcc.DXCC()
     dxcc.load()
-    bandmap = _bandmap.BandMap(dxcc)
-    map = Map(dxcc, bandmap)
+    aggregator = _spotting.SpotAggregator(dxcc)
+    map = Map()
+
     map.highlight_locator(config.locator)
+    aggregator.update_spots.connect(map.highlight_spots)
 
     win = MapWindow(map)
     win.show()
 
     clusters = [] #config.clusters
     spotting_file = "../rbn.txt"
-
-    spotting_threads = []
-    for c in clusters:
-        st = _spotting.SpottingThread.telnet(c.host, c.port, c.user, c.password)
-        st.spot_received.connect(bandmap.spot_received)
-        st.start()
-        spotting_threads.append(st)
-
-    if spotting_file:
-        st = _spotting.SpottingThread.textfile(spotting_file)
-        st.spot_received.connect(bandmap.spot_received)
-        st.start()
-        spotting_threads.append(st)
+    aggregator.start_spotting(clusters, spotting_file)
 
     result = app.exec_()
     
-    for st in spotting_threads:
-        st.stop()
-        st.wait()
-
+    aggregator.stop_spotting()
     sys.exit(result)
 
 if __name__ == "__main__": main(sys.argv)

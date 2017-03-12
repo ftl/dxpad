@@ -5,6 +5,8 @@ import sys, time, re
 import telnetlib as tn
 from PySide import QtCore, QtGui
 
+import _dxcc, _config
+
 class Spot:
 	def __init__(self, call, frequency, time, source_call, source_grid):
 		self.call = call
@@ -150,9 +152,98 @@ class SpottingThread(QtCore.QThread):
 	def stop(self):
 		self.spotter.stop()
 
+class DxSpot:
+	def __init__(self, call, frequency, dxcc_info):
+		self.call = call
+		self.frequency = frequency
+		self.dxcc_info = dxcc_info
+		self.sources = set([])
+		self.lastseen = 0
+
+	def __str__(self):
+		return "{0:<10} on {1:>8.1f} kHz, age {2:3.0f}, sources: {3:>2.0f}".format(self.call, self.frequency, time.time() - self.lastseen, len(self.sources))
+
+class SpotAggregator(QtCore.QObject):
+	update_spots = QtCore.Signal(object)
+
+	def __init__(self, dxcc, parent = None):
+		QtCore.QObject.__init__(self, parent)
+		self.dxcc = dxcc
+		self.spots = {}
+		self.timer = QtCore.QTimer(self)
+		self.timer.timeout.connect(self.tick)
+		self.timer.start(1000)
+		self.spot_timeout = 60
+		self.spotting_threads = []
+
+	@QtCore.Slot(object)
+	def spot_received(self, incoming_spot):
+		if incoming_spot.call in self.spots:
+			spots_by_call = self.spots[incoming_spot.call]
+			spot = None
+			for s in spots_by_call:
+				if abs(s.frequency - incoming_spot.frequency) <= 2:
+					spot = s
+					break
+
+			if not spot:
+				spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
+				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+				spot.lastseen = incoming_spot.time
+				spots_by_call.append(spot)
+			else:
+				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+				spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
+				spot.lastseen = incoming_spot.time
+
+		else:
+			spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
+			spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+			spot.lastseen = incoming_spot.time
+			spots_by_call = [spot]
+
+		self.spots[incoming_spot.call] = spots_by_call
+
+	@QtCore.Slot()
+	def tick(self):
+		now = time.time()
+		updated_spots = {}
+		spots_to_emit = []
+		for call in self.spots.keys():
+			spots_by_call = filter(lambda spot: now - spot.lastseen <= self.spot_timeout, self.spots[call])
+			if len(spots_by_call) > 0:
+				updated_spots[call] = spots_by_call
+				spots_to_emit.extend(spots_by_call)
+
+		self.spots = updated_spots
+		spots_to_emit = sorted(spots_to_emit, key= lambda spot: spot.frequency)
+
+		self.update_spots.emit(spots_to_emit)
+
+	def start_spotting(self, clusters, spotting_file = None):
+		for c in clusters:
+			st = SpottingThread.telnet(c.host, c.port, c.user, c.password)
+			st.spot_received.connect(self.spot_received)
+			st.start()
+			self.spotting_threads.append(st)
+
+		if spotting_file:
+			st = SpottingThread.textfile(spotting_file)
+			st.spot_received.connect(self.spot_received)
+			st.start()
+			self.spotting_threads.append(st)
+
+	def stop_spotting(self):
+		for st in self.spotting_threads:
+			st.stop()
+			st.wait()
+		self.spotting_threads = []
+
 @QtCore.Slot(object)
-def spot_received(spot):
-	print str(spot)
+def print_spots(spots):
+	print "Spots at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time())))
+	print "\n".join(map(lambda spot: str(spot), spots))
+	print ""
 
 if __name__ == "__main__":
 	app = QtGui.QApplication(sys.argv)
@@ -162,8 +253,16 @@ if __name__ == "__main__":
 	wid.setWindowTitle('Simple')
 	wid.show()
 
-	st = SpottingThread.textfile("rbn.txt")
-	st.spot_received.connect(spot_received)
+	config = _config.load_config()
+
+	dxcc = _dxcc.DXCC()
+	dxcc.load()
+
+	aggregator = SpotAggregator(dxcc)
+	aggregator.update_spots.connect(print_spots)
+
+	st = SpottingThread.textfile("../rbn.txt")
+	st.spot_received.connect(aggregator.spot_received)
 	st.start()
 
 	result = app.exec_()

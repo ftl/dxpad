@@ -51,8 +51,9 @@ def main(args):
 
 	dxcc = _dxcc.DXCC()
 	dxcc.load()
-	bandmap = _bandmap.BandMap(dxcc)
-	map = _map.Map(dxcc, bandmap)
+	aggregator = _spotting.SpotAggregator(dxcc)
+	bandmap = _bandmap.BandMap()
+	map = _map.Map()
 	notepad = _notepad.Notepad()
 	entry_line = _entry.EntryLine(notepad)
 	callbooks = []
@@ -61,6 +62,9 @@ def main(args):
 	if config.qrz:
 		callbooks.append(_qrz.AsyncQrz(config.qrz.user, config.qrz.password))
 	infohub = _infohub.Infohub(dxcc, callbooks, config.call, config.locator)
+
+	aggregator.update_spots.connect(bandmap.spots_received)
+	aggregator.update_spots.connect(map.highlight_spots)
 	notepad.call_added.connect(infohub.lookup_call)
 
 	main_window = MainWindow(app, entry_line, notepad, infohub)
@@ -81,26 +85,11 @@ def main(args):
 
 	clusters = config.clusters
 	spotting_file = None #"rbn.txt"
-
-	spotting_threads = []
-	for c in clusters:
-		st = _spotting.SpottingThread.telnet(c.host, c.port, c.user, c.password)
-		st.spot_received.connect(bandmap.spot_received)
-		st.start()
-		spotting_threads.append(st)
-
-	if spotting_file:
-		st = _spotting.SpottingThread.textfile(spotting_file)
-		st.spot_received.connect(bandmap.spot_received)
-		st.start()
-		spotting_threads.append(st)
+	aggregator.start_spotting(clusters, spotting_file)
 
 	result = app.exec_()
 	
-	for st in spotting_threads:
-		st.stop()
-		st.wait()
-
+	aggregator.stop_spotting()
 	sys.exit(result)
 
 if __name__ == "__main__": main(sys.argv)
