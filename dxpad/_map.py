@@ -4,7 +4,7 @@
 import sys, time, os
 from PySide import QtCore, QtGui, QtSvg
 
-import _sun, _location, _grid, _dxcc, _bandmap, _spotting, _config, _windowmanager
+import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _windowmanager
 
 
 """
@@ -59,6 +59,8 @@ class Map(QtCore.QObject):
         self.grayline_visible = True
         self.highlighted_locators = []
         self.locator_heatmap = LocatorHeatmap()
+        self.band = _bandplan.IARU_REGION_1[5]
+        self.spotter_continents = ["EU"]
 
     @QtCore.Slot(bool)
     def show_map(self, state):
@@ -93,7 +95,7 @@ class Map(QtCore.QObject):
     @QtCore.Slot(object)
     def highlight_spots(self, spots):
         locator_heatmap = LocatorHeatmap()
-        for spot in spots:
+        for spot in filter(self._filter_spot, spots):
             if not spot.dxcc_info:
                 print str(spot) 
                 continue
@@ -101,6 +103,11 @@ class Map(QtCore.QObject):
             locator_heatmap.add(locator, 1)
         self.locator_heatmap = locator_heatmap
         self.changed.emit()
+
+    def _filter_spot(self, spot):
+        if not self.band.contains(spot.frequency): return False
+        if not filter(lambda source: source[2].continent in self.spotter_continents, spot.sources): return False
+        return True
 
 class MapWidget(QtGui.QWidget):
     def __init__(self, map, parent = None):
