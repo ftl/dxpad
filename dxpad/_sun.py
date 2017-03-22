@@ -62,7 +62,7 @@ def calculate_day_night_terminator(time):
         lat = _latitude(angle, equitorial_position)
         polygon.append((lat, lon))
 
-    if equitorial_position < 0:
+    if equitorial_position[1] > 0:
         polygon.insert(0, (-90, -180))
         polygon.append((-90, 180))
     else:
