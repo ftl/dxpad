@@ -26,29 +26,69 @@ remove_marker(LatLon, kind)
 HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
 
 class LocatorHeatmap:
-    def __init__(self, max_heat = 20, cell_width = 2, cell_height = 1):
+    MAX_HEAT = 1.0
+    def __init__(self, cell_width = 2, cell_height = 1):
         self.heatmap = {}
-        self.max_heat = max_heat
         self.cell_width = cell_width
         self.cell_height = cell_height
 
-    def add(self, locator, heat = 1):
+    def add(self, locator, heat, add = float.__add__):
         coordinates = self._to_coordinates(locator)
-        self._add_heat(coordinates, heat)
+        self._add_heat(coordinates, heat, add)
 
     def _to_coordinates(self, locator):
         latlon = locator.to_lat_lon()
         return _location.LatLon(int(latlon.lat) - int(latlon.lat) % self.cell_height, int(latlon.lon) - int(latlon.lon) % self.cell_width)
 
-    def _add_heat(self, coordinates, heat):
+    def _add_heat(self, coordinates, heat, add):
         current_heat = self._heat(coordinates)
-        new_heat = min(current_heat + heat, self.max_heat)
+        new_heat = min(add(current_heat, heat), self.MAX_HEAT)
         self.heatmap[coordinates] = new_heat
         return new_heat
 
     def _heat(self, coordinates):
-        if not coordinates in self.heatmap: return 0
+        if not coordinates in self.heatmap: return 0.0
         return self.heatmap[coordinates]
+
+
+class SpotterContinentFilter:
+    def __init__(self, continents = []):
+        self.continents = continents
+
+    def filter_spot(self, spot):
+        return filter(lambda source: source.source_dxcc_info.continent in self.continents, spot.sources)
+
+    def spot_locators(self, spot):
+        return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.1)]
+
+    def add_heat(self, a, b):
+        return a + b
+
+
+class ReceivingCallFilter:
+    MAX_SNR = 30.0
+    def __init__(self, call = None):
+        self.call = call
+
+    def filter_spot(self, spot):
+        return spot.call == self.call
+
+    def spot_locators(self, spot):
+        def to_grid_heat_tuple(source):
+            if hasattr(source, "snr"):
+                heat = source.snr / self.MAX_SNR
+            else:
+                heat = 0.1
+            if source.source_grid:
+                grid = source.source_grid
+            else:
+                grid = _grid.Locator.from_lat_lon(source.source_dxcc_info.latlon)
+            return (grid, heat)
+        return [to_grid_heat_tuple(source) for source in spot.sources]
+
+    def add_heat(self, a, b):
+        return (a + b) / 2.0
+
 
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
@@ -63,7 +103,8 @@ class Map(QtCore.QObject):
         self.highlighted_locators = []
         self.locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
         self.band = _bandplan.IARU_REGION_1[5]
-        self.spotter_continents = ["EU"]
+        self.spot_filters = [SpotterContinentFilter(), ReceivingCallFilter()]
+        self.spot_filter = self.spot_filters[0]
 
     @QtCore.Slot(bool)
     def show_map(self, state):
@@ -96,21 +137,38 @@ class Map(QtCore.QObject):
         self.changed.emit()
 
     @QtCore.Slot(object)
+    def select_continents(self, continents):
+        self.spot_filters[0].continents = continents
+        self.changed.emit()
+
+    @QtCore.Slot()
+    def show_spots_received_on_selected_continents(self):
+        self.spot_filter = self.spot_filters[0]
+        self.changed.emit()
+
+    @QtCore.Slot(object)
+    def select_call(self, call):
+        self.spot_filters[1].call = call
+        self.changed.emit()
+
+    @QtCore.Slot()
+    def show_spots_receiving_selected_call(self):
+        self.spot_filter = self.spot_filters[1]
+        self.changed.emit()
+
+    @QtCore.Slot(object)
     def highlight_spots(self, spots):
         locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
-        for spot in filter(self._filter_spot, spots):
-            if not spot.dxcc_info:
-                print str(spot) 
-                continue
-            locator = _grid.Locator.from_lat_lon(spot.dxcc_info.latlon)
-            locator_heatmap.add(locator, 1)
+        filtered_spots = filter(self.spot_filter.filter_spot, filter(self._in_selected_band, spots))
+        for spot in filtered_spots:
+            for locator, heat in self.spot_filter.spot_locators(spot):
+                locator_heatmap.add(locator, heat, self.spot_filter.add_heat)
         self.locator_heatmap = locator_heatmap
         self.changed.emit()
 
-    def _filter_spot(self, spot):
-        if not self.band.contains(spot.frequency): return False
-        if not filter(lambda source: source[2].continent in self.spotter_continents, spot.sources): return False
-        return True
+    def _in_selected_band(self, spot):
+        return self.band.contains(spot.frequency)
+
 
 class MapWidget(QtGui.QWidget):
     def __init__(self, map, parent = None):
@@ -206,7 +264,7 @@ class MapWidget(QtGui.QWidget):
     def _draw_locator_heatmap(self, painter):
         heatmap = self.map.locator_heatmap
         for latlon in heatmap.heatmap:
-            heat = float(self.map.locator_heatmap.heatmap[latlon]) / float(self.map.locator_heatmap.max_heat)
+            heat = self.map.locator_heatmap.heatmap[latlon]
             self._draw_lat_lon(painter, latlon, width = heatmap.cell_width, height = heatmap.cell_height, color = self._heat_color(heat), opacity = 0.4)
 
     def _draw_lat_lon(self, painter, latlon, width = 2, height = 1, color = QtGui.QColor(255, 0, 0), opacity = 1):
@@ -233,28 +291,21 @@ class MapWindow(_windowmanager.ManagedWindow):
         self.setWindowTitle("Map")
         self.resize(1200, 600)
         self.map = map
-
         self.map_widget = MapWidget(map)
 
-        show_map = QtGui.QCheckBox()
-        show_map.setText("Karte")
-        show_map.setCheckState(QtCore.Qt.Checked if self.map.map_visible else QtCore.Qt.Unchecked)
-        show_map.stateChanged.connect(self.map.show_map)
+        show_spots_received_on_selected_continents = QtGui.QRadioButton()
+        show_spots_received_on_selected_continents.setText(u"Empfangen in " + u", ".join(self.map.spot_filters[0].continents))
+        show_spots_received_on_selected_continents.setChecked(True)
+        show_spots_received_on_selected_continents.clicked.connect(self.map.show_spots_received_on_selected_continents)
 
-        show_grid = QtGui.QCheckBox()
-        show_grid.setText("Locator-Gitter")
-        show_grid.setCheckState(QtCore.Qt.Checked if self.map.grid_visible else QtCore.Qt.Unchecked)
-        show_grid.stateChanged.connect(self.map.show_grid)
-
-        show_grayline = QtGui.QCheckBox()
-        show_grayline.setText("Tag/Nacht-Grenze")
-        show_grayline.setCheckState(QtCore.Qt.Checked if self.map.grayline_visible else QtCore.Qt.Unchecked)
-        show_grayline.stateChanged.connect(self.map.show_grayline)
+        show_spots_receiving_selected_call = QtGui.QRadioButton()
+        show_spots_receiving_selected_call.setText(u"Meine Reichweite")
+        show_spots_receiving_selected_call.setChecked(False)
+        show_spots_receiving_selected_call.clicked.connect(self.map.show_spots_receiving_selected_call)
 
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(show_map)
-        hbox.addWidget(show_grid)
-        hbox.addWidget(show_grayline)
+        hbox.addWidget(show_spots_received_on_selected_continents)
+        hbox.addWidget(show_spots_receiving_selected_call)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox)
@@ -283,6 +334,8 @@ def main(args):
     map = Map()
 
     map.highlight_locator(config.locator)
+    map.select_call("UA9OC") #config.call)
+    map.select_continents([dxcc.find_dxcc_info(config.call).continent])
     aggregator.update_spots.connect(map.highlight_spots)
 
     win = MapWindow(map)

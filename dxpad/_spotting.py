@@ -14,9 +14,10 @@ class Spot:
 		self.time = time
 		self.source_call = source_call
 		self.source_grid = source_grid
+		self.source_dxcc_info = None
 
 	def __str__(self):
-		return "source(" + self.source_call + ", " + self.source_grid + ") spot(" + self.call + ", " + str(self.frequency) + ", " + str(self.time) + ")" 
+		return "source({}, {}, {}) spot({}, {}, {})".format(self.source_call, self.source_grid, self.source_dxcc_info, self.call, self.frequency, self.time)
 
 class ClusterSpot(Spot):
 	def __init__(self, call, frequency, time, source_call, source_grid, comment):
@@ -28,15 +29,15 @@ class ClusterSpot(Spot):
 
 
 class RbnSpot(Spot):
-	def __init__(self, call, frequency, time, source_call, source_grid, mode, rssi, speed, rbnType):
+	def __init__(self, call, frequency, time, source_call, source_grid, mode, snr, speed, rbnType):
 		Spot.__init__(self, call, frequency, time, source_call, source_grid)
 		self.mode = mode
-		self.rssi = rssi
+		self.snr = snr
 		self.speed = speed
 		self.rbnType = rbnType
 
 	def __str__(self):
-		return Spot.__str__(self) + " rbn(" + self.mode + ", " + self.rssi + ", " + self.speed + ", " + self.rbnType + ")"
+		return Spot.__str__(self) + " rbn(mode: {}, snr: {}, speed: {}, type: {})".format(self.mode, self.snr, self.speed, self.rbnType)
 
 class TelnetClient:
 	def __init__(self, hostname, port, call, password = ""):
@@ -114,19 +115,20 @@ class ClusterSpotter:
 		frequency = float(spot_match.group(3))
 		timestamp = time.time()
 		source_call = spot_match.group(1)
-		source_grid = str(spot_match.group(8))
+		source_grid = _grid.Locator(spot_match.group(8)) if spot_match.group(8) else None
 		comment = spot_match.group(5).strip()
 
 		rbn_comment_match = self._rbn_comment_expression.match(comment)
 		if rbn_comment_match:
 			mode = rbn_comment_match.group(1)
-			rssi = rbn_comment_match.group(2)
+			snr = float(rbn_comment_match.group(2))
 			speed = rbn_comment_match.group(3)
 			rbnType = rbn_comment_match.group(5)
-			spot = RbnSpot(call, frequency, timestamp, source_call, source_grid, mode, rssi, speed, rbnType)
+			spot = RbnSpot(call, frequency, timestamp, source_call, source_grid, mode, snr, speed, rbnType)
 		else:
 			spot = ClusterSpot(call, frequency, timestamp, source_call, source_grid, comment)
 		spot_callback(spot)
+
 
 class SpottingThread(QtCore.QThread):
 	spot_received = QtCore.Signal(object)
@@ -188,17 +190,20 @@ class SpotAggregator(QtCore.QObject):
 
 			if not spot:
 				spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
-				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+				incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+				spot.sources.add(incoming_spot)
 				spot.lastseen = incoming_spot.time
 				spots_by_call.append(spot)
 			else:
-				spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+				incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+				spot.sources.add(incoming_spot)
 				spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
 				spot.lastseen = incoming_spot.time
 
 		else:
 			spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
-			spot.sources.add((incoming_spot.source_call, incoming_spot.source_grid, self.dxcc.find_dxcc_info(incoming_spot.source_call)))
+			incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+			spot.sources.add(incoming_spot)
 			spot.lastseen = incoming_spot.time
 			spots_by_call = [spot]
 
@@ -261,7 +266,7 @@ if __name__ == "__main__":
 	aggregator = SpotAggregator(dxcc)
 	aggregator.update_spots.connect(print_spots)
 
-	st = SpottingThread.textfile("../rbn.txt")
+	st = SpottingThread.textfile(dxcc, "../rbn.txt")
 	st.spot_received.connect(aggregator.spot_received)
 	st.start()
 

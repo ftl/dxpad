@@ -54,6 +54,9 @@ def main(args):
 	aggregator = _spotting.SpotAggregator(dxcc)
 	bandmap = _bandmap.BandMap()
 	map = _map.Map()
+	map.highlight_locator(config.locator)
+	map.select_call(config.call)
+	map.select_continents([dxcc.find_dxcc_info(config.call).continent])
 	notepad = _notepad.Notepad()
 	entry_line = _entry.EntryLine(notepad)
 	callbooks = []
@@ -70,7 +73,6 @@ def main(args):
 	main_window = MainWindow(app, entry_line, notepad, infohub)
 	bandmap_window = _bandmap.BandmapWindow(bandmap)
 	map_window = _map.MapWindow(map)
-	map.highlight_locator(config.locator)
 
 	window_manager.add_window(main_window)
 	window_manager.add_window(bandmap_window)
@@ -84,7 +86,7 @@ def main(args):
 	main_window.setFocus()
 
 	clusters = config.clusters
-	spotting_file = None #"rbn.txt"
+	spotting_file = None #"../rbn.txt"
 	aggregator.start_spotting(clusters, spotting_file)
 
 	result = app.exec_()
