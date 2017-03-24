@@ -149,7 +149,6 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def select_call(self, call):
-        print "Selected call: " + str(call)
         self.spot_filters[1].call = call
         self.changed.emit()
 

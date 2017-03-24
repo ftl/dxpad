@@ -4,7 +4,7 @@
 import sys
 from PySide import QtGui
 
-import _bandmap, _dxcc, _map, _spotting, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager
+import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager
 
 class MainWindow(_windowmanager.ManagedMainWindow):
 	def __init__(self, app, entry_line, notepad, infohub, parent = None):
@@ -52,6 +52,7 @@ def main(args):
 	dxcc = _dxcc.DXCC()
 	dxcc.load()
 	aggregator = _spotting.SpotAggregator(dxcc)
+	pskreporter = _pskreporter.PskReporter(config.locator)
 	bandmap = _bandmap.BandMap()
 	map = _map.Map()
 	map.highlight_locator(config.locator)
@@ -68,6 +69,8 @@ def main(args):
 
 	aggregator.update_spots.connect(bandmap.spots_received)
 	aggregator.update_spots.connect(map.highlight_spots)
+	pskreporter.spot_received.connect(aggregator.spot_received)
+	pskreporter.start()
 	notepad.call_added.connect(infohub.lookup_call)
 
 	main_window = MainWindow(app, entry_line, notepad, infohub)

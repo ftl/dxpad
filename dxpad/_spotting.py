@@ -266,7 +266,7 @@ if __name__ == "__main__":
 	aggregator = SpotAggregator(dxcc)
 	aggregator.update_spots.connect(print_spots)
 
-	st = SpottingThread.textfile(dxcc, "../rbn.txt")
+	st = SpottingThread.textfile("../rbn.txt")
 	st.spot_received.connect(aggregator.spot_received)
 	st.start()
 
