@@ -162,7 +162,7 @@ class BandmapPainter:
 		self.last_x_by_level = {}
 
 	def text_width(self, text):
-		return self.painter.fontMetrics().boundingRect(text).width()
+		return self.painter.fontMetrics().boundingRect(str(text)).width()
 
 	def frequency_x(self, frequency):
 		return int((frequency - self.widget.from_kHz) * self.pix_per_kHz)
@@ -204,7 +204,7 @@ class BandmapPainter:
 		rect = self._find_spot_rect(spot)
 		self.painter.setPen(color)
 		self.painter.drawRect(rect)
-		self.painter.drawText(rect.x() + 2, rect.y() + self.text_height, spot.call)
+		self.painter.drawText(rect.x() + 2, rect.y() + self.text_height, str(spot.call))
 
 	def _find_spot_rect(self, spot):
 		frequency_x = self.frequency_x(spot.frequency)

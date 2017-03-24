@@ -5,7 +5,7 @@ import sys, time, re
 import telnetlib as tn
 from PySide import QtCore, QtGui
 
-import _dxcc, _config
+import _dxcc, _config, _grid, _callinfo
 
 class Spot:
 	def __init__(self, call, frequency, time, source_call, source_grid):
@@ -111,10 +111,10 @@ class ClusterSpotter:
 			print line
 			return
 		
-		call = spot_match.group(4)
+		call = _callinfo.Call(spot_match.group(4))
 		frequency = float(spot_match.group(3))
 		timestamp = time.time()
-		source_call = spot_match.group(1)
+		source_call = _callinfo.Call(spot_match.group(1))
 		source_grid = _grid.Locator(spot_match.group(8)) if spot_match.group(8) else None
 		comment = spot_match.group(5).strip()
 

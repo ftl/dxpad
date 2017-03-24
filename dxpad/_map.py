@@ -71,7 +71,8 @@ class ReceivingCallFilter:
         self.call = call
 
     def filter_spot(self, spot):
-        return spot.call == self.call
+        if not self.call: return False
+        return self.call.base_call == spot.call.base_call
 
     def spot_locators(self, spot):
         def to_grid_heat_tuple(source):
@@ -148,6 +149,7 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def select_call(self, call):
+        print "Selected call: " + str(call)
         self.spot_filters[1].call = call
         self.changed.emit()
 
