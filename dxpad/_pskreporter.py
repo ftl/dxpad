@@ -23,19 +23,17 @@ class PskReporterSpot(_spotting.Spot):
 	def __str__(self):
 		return _spotting.Spot.__str__(self) + " pskreporter(mode: {}, snr: {})".format(self.mode, self.snr)
 
-class PskReporter(QtCore.QObject):
+class PskReporterWorker(QtCore.QThread):
 	MAX_SNR = 30.0
 	spot_received = QtCore.Signal(object)
 
-	def __init__(self, own_locator, parent = None):
-		QtCore.QObject.__init__(self, parent)
-		self.own_locator = own_locator
-		self.timer = QtCore.QTimer(self)
-		self.timer.timeout.connect(self.tick)
-		self.timer.setInterval(300000)
+	def __init__(self, grid, parent = None):
+		QtCore.QThread.__init__(self, parent)
+		self.grid = grid
 
-	def tick(self):
-		response = requests.get("http://retrieve.pskreporter.info/query", params = {"senderCallsign": str(self.own_locator)[:2], "rronly": "1", "modify": "grid", "flowStartSeconds": "-600"})
+	def run(self):
+		print "PskReporter: fetch spots"
+		response = requests.get("http://retrieve.pskreporter.info/query", params = {"senderCallsign": self.grid, "rronly": "1", "modify": "grid", "flowStartSeconds": "-600"})
 		if response.status_code != 200:
 			print "PskReporter: request failed"
 			print str(response.status_code)
@@ -61,12 +59,29 @@ class PskReporter(QtCore.QObject):
 			incoming_spot = PskReporterSpot(call, frequency, time, source_call, source_grid, mode, normalized_snr)
 			self.spot_received.emit(incoming_spot)
 
+
+class PskReporter(QtCore.QObject):
+	spot_received = QtCore.Signal(object)
+
+	def __init__(self, own_locator, parent = None):
+		QtCore.QObject.__init__(self, parent)
+		self.worker = PskReporterWorker(str(own_locator)[:2])
+		self.worker.spot_received.connect(self._spot_received)
+		self.timer = QtCore.QTimer(self)
+		self.timer.timeout.connect(self.worker.start)
+		self.timer.setInterval(240000)
+
+	def _spot_received(self, spot):
+		self.spot_received.emit(spot)
+
 	def start(self):
-		self.tick()
+		self.worker.start()
 		self.timer.start()
 
 	def stop(self):
 		self.timer.stop()
+		self.worker.wait()
+
 
 def print_spot(spot):
 	print str(spot)

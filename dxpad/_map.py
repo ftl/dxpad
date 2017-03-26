@@ -56,7 +56,7 @@ class SpotterContinentFilter:
         self.continents = continents
 
     def filter_spot(self, spot):
-        return filter(lambda source: source.source_dxcc_info.continent in self.continents, spot.sources)
+        return filter(lambda source: source.source_dxcc_info and (source.source_dxcc_info.continent in self.continents), spot.sources)
 
     def spot_locators(self, spot):
         return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.1)]
