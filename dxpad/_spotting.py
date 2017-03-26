@@ -296,3 +296,5 @@ if __name__ == "__main__":
 
 # cluster.dl9gtb.de:7373 (CC Cluster):
 # DX de HL2WA:      7026.0  9M2PUL       tnx QSO                        1002Z
+
+# WCY de DK0WCY-1 <12> : K=2 expK=0 A=13 R=12 SFI=72 SA=qui GMF=qui Au=no
