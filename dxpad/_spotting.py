@@ -8,7 +8,8 @@ from PySide import QtCore, QtGui
 import _dxcc, _config, _grid, _callinfo
 
 class Spot:
-	def __init__(self, call, frequency, time, source_call, source_grid):
+	def __init__(self, ttl, call, frequency, time, source_call, source_grid):
+		self.ttl = ttl
 		self.call = call
 		self.frequency = frequency
 		self.time = time
@@ -17,11 +18,12 @@ class Spot:
 		self.source_dxcc_info = None
 
 	def __str__(self):
-		return "source({}, {}, {}) spot({}, {}, {})".format(self.source_call, self.source_grid, self.source_dxcc_info, self.call, self.frequency, self.time)
+		return "source({}, {}, {}) spot({}, {}, {}, {})".format(self.source_call, self.source_grid, self.source_dxcc_info, self.ttl, self.call, self.frequency, self.time)
 
 class ClusterSpot(Spot):
+	TTL = 300
 	def __init__(self, call, frequency, time, source_call, source_grid, comment):
-		Spot.__init__(self, call, frequency, time, source_call, source_grid)
+		Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
 		self.comment = comment
 
 	def __str__(self):
@@ -29,8 +31,9 @@ class ClusterSpot(Spot):
 
 
 class RbnSpot(Spot):
+	TTL = 60
 	def __init__(self, call, frequency, time, source_call, source_grid, mode, snr, speed, rbnType):
-		Spot.__init__(self, call, frequency, time, source_call, source_grid)
+		Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
 		self.mode = mode
 		self.snr = snr
 		self.speed = speed
@@ -164,10 +167,10 @@ class DxSpot:
 		self.frequency = frequency
 		self.dxcc_info = dxcc_info
 		self.sources = set([])
-		self.lastseen = 0
+		self.timeout = time.time()
 
 	def __str__(self):
-		return "{0:<10} on {1:>8.1f} kHz, age {2:3.0f}, sources: {3:>2.0f}".format(self.call, self.frequency, time.time() - self.lastseen, len(self.sources))
+		return "{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, sources: {3:>2.0f}".format(self.call, self.frequency, self.timeout - time.time(), len(self.sources))
 
 class SpotAggregator(QtCore.QObject):
 	update_spots = QtCore.Signal(object)
@@ -179,7 +182,6 @@ class SpotAggregator(QtCore.QObject):
 		self.timer = QtCore.QTimer(self)
 		self.timer.timeout.connect(self.tick)
 		self.timer.start(1000)
-		self.spot_timeout = 300
 		self.spotting_threads = []
 
 	@QtCore.Slot(object)
@@ -196,19 +198,19 @@ class SpotAggregator(QtCore.QObject):
 				spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
 				incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
 				spot.sources.add(incoming_spot)
-				spot.lastseen = incoming_spot.time
+				spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
 				spots_by_call.append(spot)
 			else:
 				incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
 				spot.sources.add(incoming_spot)
 				spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
-				spot.lastseen = incoming_spot.time
+				spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
 
 		else:
 			spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
 			incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
 			spot.sources.add(incoming_spot)
-			spot.lastseen = incoming_spot.time
+			spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
 			spots_by_call = [spot]
 
 		self.spots[incoming_spot.call] = spots_by_call
@@ -219,7 +221,7 @@ class SpotAggregator(QtCore.QObject):
 		updated_spots = {}
 		spots_to_emit = []
 		for call in self.spots.keys():
-			spots_by_call = filter(lambda spot: now - spot.lastseen <= self.spot_timeout, self.spots[call])
+			spots_by_call = filter(lambda spot: now <= spot.timeout, self.spots[call])
 			if len(spots_by_call) > 0:
 				updated_spots[call] = spots_by_call
 				spots_to_emit.extend(spots_by_call)

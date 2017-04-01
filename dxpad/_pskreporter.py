@@ -15,8 +15,9 @@ from PySide import QtCore, QtGui
 import _spotting, _callinfo, _grid, _location, _config
 
 class PskReporterSpot(_spotting.Spot):
+	TTL = 600
 	def __init__(self, call, frequency, time, source_call, source_grid, mode, snr):
-		_spotting.Spot.__init__(self, call, frequency, time, source_call, source_grid)
+		_spotting.Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
 		self.mode = mode
 		self.snr = snr
 
