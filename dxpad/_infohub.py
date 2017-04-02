@@ -8,6 +8,8 @@ import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, _config
 
 class Infohub(QtCore.QObject):
 	info_changed = QtCore.Signal(object, object)
+	call_looked_up = QtCore.Signal(object)
+	locator_looked_up = QtCore.Signal(object)
 
 	def __init__(self, dxcc, callbooks = [], own_call = _config.DEFAULT_CALL, own_locator = _config.DEFAULT_LOCATOR, parent = None):
 		QtCore.QObject.__init__(self, parent)
@@ -69,7 +71,15 @@ class Infohub(QtCore.QObject):
 			else:
 				existing_info.qsl_service = info.qsl_service
 		existing_info.touch()
-		self.info_changed.emit(call, existing_info)
+		self._emit_lookup(call, existing_info)
+
+	def _emit_lookup(self, call, info):
+		self.info_changed.emit(call, info)
+		self.call_looked_up.emit(call)
+		if info.locator:
+			self.locator_looked_up.emit(info.locator)
+		elif info.latlon:
+			self.locator_looked_up.emit(_grid.Locator.from_lat_lon(info.latlon))		
 
 	@QtCore.Slot(object)
 	def lookup_call(self, call):
@@ -77,7 +87,7 @@ class Infohub(QtCore.QObject):
 		if call in self: 
 			info = self[call]
 			info.touch()
-			self.info_changed.emit(call, info)
+			self._emit_lookup(call, info)
 			return
 
 		info = _callinfo.Info(call)
@@ -86,7 +96,7 @@ class Infohub(QtCore.QObject):
 			info.latlon = info.dxcc_info.latlon
 			info.locator = _grid.Locator.from_lat_lon(info.dxcc_info.latlon)
 		self[call] = info
-		self.info_changed.emit(call, info)
+		self._emit_lookup(call, info)
 		for callbook in self.callbooks:
 			callbook.lookup_call(call)
 
@@ -235,6 +245,9 @@ class InfohubWindow(QtGui.QWidget):
         self.infohub.lookup_call(_callinfo.Call(self.line.text()))
         self.line.setText("")
 
+def print_lookup(o):
+	print "looked up: " + str(o)
+
 def main(args):
 	app = QtGui.QApplication(args)
 
@@ -243,7 +256,9 @@ def main(args):
 	dxcc.load()
 	hamqth = _hamqth.AsyncHamQTH(config.hamqth.user, config.hamqth.password)
 	qrz = _qrz.AsyncQrz(config.qrz.user, config.qrz.password)
-	infohub = Infohub(dxcc, [hamqth, qrz], config)
+	infohub = Infohub(dxcc, [hamqth, qrz], config.call, config.locator)
+	infohub.call_looked_up.connect(print_lookup)
+	infohub.locator_looked_up.connect(print_lookup)
 
 	infohub_win = InfohubWindow(infohub)
 	infohub_win.resize(300, 400)

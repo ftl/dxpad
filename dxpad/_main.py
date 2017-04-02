@@ -66,6 +66,7 @@ def main(args):
 	if config.qrz:
 		callbooks.append(_qrz.AsyncQrz(config.qrz.user, config.qrz.password))
 	infohub = _infohub.Infohub(dxcc, callbooks, config.call, config.locator)
+	infohub.locator_looked_up.connect(map.set_destination_locator)
 
 	aggregator.update_spots.connect(bandmap.spots_received)
 	aggregator.update_spots.connect(map.highlight_spots)
