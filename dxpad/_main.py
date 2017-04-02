@@ -55,7 +55,7 @@ def main(args):
 	pskreporter = _pskreporter.PskReporter(config.locator)
 	bandmap = _bandmap.BandMap()
 	map = _map.Map()
-	map.highlight_locator(config.locator)
+	map.set_own_locator(config.locator)
 	map.select_call(config.call)
 	map.select_continents([dxcc.find_dxcc_info(config.call).continent])
 	notepad = _notepad.Notepad()

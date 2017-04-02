@@ -4,7 +4,7 @@
 import sys, time, os
 from PySide import QtCore, QtGui, QtSvg
 
-import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _windowmanager
+import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _callinfo, _windowmanager
 
 
 """
@@ -101,7 +101,8 @@ class Map(QtCore.QObject):
         self.map_visible = True
         self.grid_visible = True
         self.grayline_visible = True
-        self.highlighted_locators = []
+        self.own_locator = None
+        self.destination_locator = None
         self.locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
         self.band = _bandplan.IARU_REGION_1[5]
         self.spot_filters = [SpotterContinentFilter(), ReceivingCallFilter()]
@@ -123,18 +124,18 @@ class Map(QtCore.QObject):
         self.changed.emit()
 
     @QtCore.Slot(object)
-    def highlight_locator(self, locator):
-        self.highlighted_locators.append(locator)
+    def set_own_locator(self, locator):
+        self.own_locator = locator
         self.changed.emit()
 
     @QtCore.Slot(object)
-    def clear_locator(self, locator):
-        self.highlighted_locators.remove(locator)
+    def set_destination_locator(self, locator):
+        self.destination_locator = locator
         self.changed.emit()
 
-    @QtCore.Slot()
-    def clear_all_locators(self):
-        self.highlighted_locators = []
+    @QtCore.Slot(object)
+    def clear_destination_locator(self):
+        self.destination_locator = None
         self.changed.emit()
 
     @QtCore.Slot(object)
@@ -181,6 +182,7 @@ class MapWidget(QtGui.QWidget):
     def paintEvent(self, event):
         painter = QtGui.QPainter()
         painter.begin(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
         self.draw_widget(painter)
         painter.end()
 
@@ -210,7 +212,8 @@ class MapWidget(QtGui.QWidget):
         if self.map.grayline_visible:
             self._draw_grayline(painter)
         self._draw_locator_heatmap(painter)
-        self._draw_highlighted_locators(painter)
+        self._draw_own_locator(painter)
+        self._draw_destination(painter)
 
     def _draw_map(self, painter):
         self.world_graphic.paint(painter, QtGui.QStyleOptionGraphicsItem())
@@ -233,22 +236,43 @@ class MapWidget(QtGui.QWidget):
         painter.setBrush(QtGui.QColor(0, 0, 0))
         painter.drawPolygon(polygon)
 
-    def _draw_highlighted_locators(self, painter):
-        for locator in self.map.highlighted_locators:
-            self._draw_highlighted_locator(painter, locator)
+    def _draw_own_locator(self, painter):
+        self._draw_highlighted_locator(painter, self.map.own_locator, QtGui.QColor(255, 0, 0))
 
-    def _draw_highlighted_locator(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
+    def _draw_destination(self, painter):
+        self._draw_highlighted_locator(painter, self.map.destination_locator, QtGui.QColor(0, 0, 255))
+        self._draw_direct_line(painter, self.map.own_locator, self.map.destination_locator, QtGui.QColor(0, 0, 255))
+
+    def _draw_highlighted_locator(self, painter, locator, color = QtGui.QColor(0, 0, 0), opacity = 1):
+        if not locator: return
         r = 1.0
         w = 1.0
         latlon = locator.to_lat_lon()
+        top_left = QtCore.QPointF(latlon.lon - r, latlon.lat - r)
+        top_right = QtCore.QPointF(latlon.lon + r, latlon.lat - r)
+        bottom_left = QtCore.QPointF(latlon.lon - r, latlon.lat + r)
+        bottom_right = QtCore.QPointF(latlon.lon + r, latlon.lat + r)
         painter.setOpacity(opacity)
         pen = QtGui.QPen(color)
         pen.setWidthF(w)
         painter.setPen(pen)
-        painter.drawLine(latlon.lon - r, latlon.lat - r, latlon.lon + r, latlon.lat + r)
-        painter.drawLine(latlon.lon - r, latlon.lat + r, latlon.lon + r, latlon.lat - r)
+        painter.drawLine(top_left, bottom_right)
+        painter.drawLine(bottom_left, top_right)
+
+    def _draw_direct_line(self, painter, source_locator, destination_locator, color = QtGui.QColor(0, 0, 0), opacity = 1):
+        if not(source_locator and destination_locator): return
+        source_latlon = source_locator.to_lat_lon()
+        destination_latlon = destination_locator.to_lat_lon()
+        p1 = QtCore.QPointF(source_latlon.lon, source_latlon.lat)
+        p2 = QtCore.QPointF(destination_latlon.lon, destination_latlon.lat)
+        painter.setOpacity(opacity)
+        pen = QtGui.QPen(color)
+        pen.setWidthF(1.0)
+        painter.setPen(pen)
+        painter.drawLine(p1, p2)        
 
     def _draw_locator_field(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
+        if not locator: return
         latlon = locator.to_lat_lon()
         precision = len(str(locator))
         if precision >= 6:
@@ -334,8 +358,9 @@ def main(args):
     aggregator = _spotting.SpotAggregator(dxcc)
     map = Map()
 
-    map.highlight_locator(config.locator)
-    map.select_call("UA9OC") #config.call)
+    map.set_own_locator(config.locator)
+    map.set_destination_locator(_grid.Locator("EM42kt"))
+    map.select_call(_callinfo.Call("UA9OC")) #config.call)
     map.select_continents([dxcc.find_dxcc_info(config.call).continent])
     aggregator.update_spots.connect(map.highlight_spots)
 
