@@ -39,6 +39,14 @@ class Cluster(Account):
 		self.host = unicode(host).encode("utf-8")
 		self.port = int(port)
 
+class WSJTX:
+	def __init__(self, listen_host, listen_port, repeater, repeater_host, repeater_port):
+		self.listen_host = listen_host
+		self.listen_port = listen_port
+		self.repeater = repeater
+		self.repeater_host = repeater_host
+		self.repeater_port = repeater_port
+
 class Config:
 	def __init__(self):
 		self.filename = filename("config.ini")
@@ -48,6 +56,7 @@ class Config:
 		self.clusters = self.get_clusters()
 		self.hamqth = self.get_account("hamqth")
 		self.qrz = self.get_account("qrz")
+		self.wsjtx = self.get_wsjtx()
 
 	def get_clusters(self):
 		clusters = []
@@ -68,6 +77,16 @@ class Config:
 		password = self.settings.value("password", None)
 		self.settings.endGroup()
 		return Account(user, password)
+
+	def get_wsjtx(self):
+		self.settings.beginGroup("wsjtx")
+		listen_host = self.settings.value("listen_host", "127.0.0.1")
+		listen_port = int(self.settings.value("listen_port", 2237))
+		repeater = bool(self.settings.value("repeater", False))
+		repeater_host = self.settings.value("repeater_host", "127.0.0.1")
+		repeater_port = int(self.settings.value("repeater_port", 22370))
+		self.settings.endGroup()
+		return WSJTX(listen_host, listen_port, repeater, repeater_host, repeater_port)
 
 	def is_empty(self):
 		return len(self.settings.allKeys()) == 0
@@ -99,6 +118,13 @@ class Config:
 		self.settings.setValue("user", self.qrz.user)
 		if self.qrz.password:
 			self.settings.setValue("password", self.qrz.password)
+		self.settings.endGroup()
+		self.settings.beginGroup("wsjtx")
+		self.settings.setValue("listen_host", "127.0.0.1")
+		self.settings.setValue("listen_port", 2237)
+		self.settings.setValue("repeater", False)
+		self.settings.setValue("repeater_host", "127.0.0.1")
+		self.settings.setValue("repeater_port", 22370)
 		self.settings.endGroup()
 		self.settings.sync()
 
