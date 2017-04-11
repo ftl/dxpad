@@ -4,7 +4,7 @@
 import sys
 from PySide import QtGui
 
-import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager
+import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager, _wsjtx
 
 class MainWindow(_windowmanager.ManagedMainWindow):
 	def __init__(self, app, entry_line, notepad, infohub, parent = None):
@@ -66,13 +66,16 @@ def main(args):
 	if config.qrz:
 		callbooks.append(_qrz.AsyncQrz(config.qrz.user, config.qrz.password))
 	infohub = _infohub.Infohub(dxcc, callbooks, config.call, config.locator)
-	infohub.locator_looked_up.connect(map.set_destination_locator)
+	wsjtx_config = config.get_wsjtx()
+	wsjtx = _wsjtx.WSJTX(wsjtx_config.listen_host, wsjtx_config.listen_port, wsjtx_config.repeater, wsjtx_config.repeater_host, wsjtx_config.repeater_port)
 
+
+	infohub.locator_looked_up.connect(map.set_destination_locator)
 	aggregator.update_spots.connect(bandmap.spots_received)
 	aggregator.update_spots.connect(map.highlight_spots)
 	pskreporter.spot_received.connect(aggregator.spot_received)
-	pskreporter.start()
 	notepad.call_added.connect(infohub.lookup_call)
+	wsjtx.status.dx_call_updated.connect(infohub.lookup_call)
 
 	main_window = MainWindow(app, entry_line, notepad, infohub)
 	bandmap_window = _bandmap.BandmapWindow(bandmap)
@@ -92,10 +95,15 @@ def main(args):
 	clusters = config.clusters
 	spotting_file = None #"../rbn.txt"
 	aggregator.start_spotting(clusters, spotting_file)
+	pskreporter.start()
+	wsjtx.start()
 
 	result = app.exec_()
 	
 	aggregator.stop_spotting()
+	pskreporter.stop()
+	wsjtx.stop()
+
 	sys.exit(result)
 
 if __name__ == "__main__": main(sys.argv)

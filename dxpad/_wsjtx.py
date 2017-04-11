@@ -4,7 +4,7 @@
 import sys, socket, struct
 from PySide import QtCore, QtGui
 
-import _config
+import _config, _callinfo, _grid
 
 class IncomingMessage:
 	def __init__(self, data):
@@ -81,7 +81,7 @@ class IncomingMessage:
 		return unicode(self.data[start:(self.current_index)])
 
 
-class WsjtxParser(QtCore.QObject):
+class Parser(QtCore.QObject):
 	heartbeat = QtCore.Signal(str, int, str, str)
 	status = QtCore.Signal(str, int, str, str, str, str, bool, bool, bool, int, int, str, str, str, bool, str, bool)
 	decode = QtCore.Signal(str, bool, int, int, float, int, str, str)
@@ -104,10 +104,7 @@ class WsjtxParser(QtCore.QObject):
 
 	@QtCore.Slot(object, object)
 	def parse_message(self, data, address):
-		print "incoming message from " + str(address)
 		message = IncomingMessage(data)
-		# print str(message)
-
 		if message.id in self.MSG_HANDLERS:
 			self.MSG_HANDLERS[message.id](message)
 		else:
@@ -190,7 +187,7 @@ class WsjtxParser(QtCore.QObject):
 	def _handle_unknown_message(self, message):
 		print "unknown message " + str(message.id)
 
-class WsjtxReceiver(QtCore.QThread):
+class Receiver(QtCore.QThread):
 	message_received = QtCore.Signal(object, object)
 
 	def __init__(self, host = "127.0.0.1", port = 2237, parent = None):
@@ -215,7 +212,7 @@ class WsjtxReceiver(QtCore.QThread):
 	def stop(self):
 		self.running = False
 
-class WsjtxRepeater(QtCore.QObject):
+class Repeater(QtCore.QObject):
 	def __init__(self, host = "127.0.0.1", port = 22370, parent = None):
 		QtCore.QObject.__init__(self, parent)
 		self.host = host
@@ -227,18 +224,174 @@ class WsjtxRepeater(QtCore.QObject):
 		self.socket.sendto(data, (self.host, self.port))
 
 
+class Status(QtCore.QObject):
+	frequency_Hz_updated = QtCore.Signal(int)
+	mode_updated = QtCore.Signal(str)
+	dx_call_updated = QtCore.Signal(object)
+	report_updated = QtCore.Signal(str)
+	tx_mode_updated = QtCore.Signal(str)
+	tx_enabled_updated = QtCore.Signal(bool)
+	transmitting_updated = QtCore.Signal(bool)
+	decoding_updated = QtCore.Signal(bool)
+	rx_df_updated = QtCore.Signal(int)
+	tx_df_updated = QtCore.Signal(int)
+	de_call_updated = QtCore.Signal(object)
+	de_grid_updated = QtCore.Signal(object)
+	dx_grid_updated = QtCore.Signal(object)
+	tx_watchdog_updated = QtCore.Signal(bool)
+	sub_mode_updated = QtCore.Signal(str)
+	fast_mode_updated = QtCore.Signal(bool)
+
+	def __init__(self, parent = None):
+		QtCore.QObject.__init__(self, parent)
+		self.unique_id = None
+		self.frequency_Hz = 0
+		self.mode = None
+		self.dx_call = None
+		self.report = None
+		self.tx_mode = None
+		self.tx_enabled = False
+		self.transmitting = False
+		self.decoding = False
+		self.rx_df = 0
+		self.tx_df = 0
+		self.de_call = None
+		self.de_grid = None
+		self.dx_grid = None
+		self.tx_watchdog = False
+		self.sub_mode = None
+		self.fast_mode = False
+
+	@QtCore.Slot(str, int, str, str, str, str, bool, bool, bool, int, int, str, str, str, bool, str, bool)
+	def update(self, unique_id, frequency_Hz, mode, dx_call, report, tx_mode, tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode):
+		self.unique_id = unique_id
+		self._update_frequency_Hz(frequency_Hz)
+		self._update_mode(mode)
+		self._update_dx_call(_callinfo.Call(dx_call) if _callinfo.Call.is_valid_call(dx_call) else None)
+		self._update_report(report)
+		self._update_tx_mode(tx_mode)
+		self._update_tx_enabled(tx_enabled)
+		self._update_transmitting(transmitting)
+		self._update_decoding(decoding)
+		self._update_rx_df(rx_df)
+		self._update_tx_df(tx_df)
+		self._update_de_call(_callinfo.Call(de_call) if _callinfo.Call.is_valid_call(de_call) else None)
+		self._update_de_grid(_grid.Locator(de_grid) if _grid.Locator.is_valid_locator(de_grid) else None)
+		self._update_dx_grid(_grid.Locator(dx_grid) if _grid.Locator.is_valid_locator(dx_grid) else None)
+		self._update_tx_watchdog(tx_watchdog)
+		self._update_sub_mode(sub_mode)
+		self._update_fast_mode(fast_mode)
+
+	def _update_frequency_Hz(self, frequency_Hz):
+		if self.frequency_Hz != frequency_Hz:
+			self.frequency_Hz = frequency_Hz
+			self.frequency_Hz_updated.emit(frequency_Hz)
+
+	def _update_mode(self, mode):
+		if self.mode != mode:
+			self.mode = mode
+			self.mode_updated.emit(mode)
+
+	def _update_dx_call(self, dx_call):
+		if self.dx_call != dx_call:
+			self.dx_call = dx_call
+			self.dx_call_updated.emit(dx_call)
+
+	def _update_report(self, report):
+		if self.report != report:
+			self.report = report
+			self.report_updated.emit(report)
+
+	def _update_tx_mode(self, tx_mode):
+		if self.tx_mode != tx_mode:
+			self.tx_mode = tx_mode
+			self.tx_mode_updated.emit(tx_mode)
+
+	def _update_tx_enabled(self, tx_enabled):
+		if self.tx_enabled != tx_enabled:
+			self.tx_enabled = tx_enabled
+			self.tx_enabled_updated.emit(tx_enabled)
+
+	def _update_transmitting(self, transmitting):
+		if self.transmitting != transmitting:
+			self.transmitting = transmitting
+			self.transmitting_updated.emit(transmitting)
+
+	def _update_decoding(self, decoding):
+		if self.decoding != decoding:
+			self.decoding = decoding
+			self.decoding_updated.emit(decoding)
+
+	def _update_rx_df(self, rx_df):
+		if self.rx_df != rx_df:
+			self.rx_df = rx_df
+			self.rx_df_updated.emit(rx_df)
+
+	def _update_tx_df(self, tx_df):
+		if self.tx_df != tx_df:
+			self.tx_df = tx_df
+			self.tx_df_updated.emit(tx_df)
+
+	def _update_de_call(self, de_call):
+		if self.de_call != de_call:
+			self.de_call = de_call
+			self.de_call_updated.emit(de_call)
+
+	def _update_de_grid(self, de_grid):
+		if self.de_grid != de_grid:
+			self.de_grid = de_grid
+			self.de_grid_updated.emit(de_grid)
+
+	def _update_dx_grid(self, dx_grid):
+		if self.dx_grid != dx_grid:
+			self.dx_grid = dx_grid
+			self.dx_grid_updated.emit(dx_grid)
+
+	def _update_tx_watchdog(self, tx_watchdog):
+		if self.tx_watchdog != tx_watchdog:
+			self.tx_watchdog = tx_watchdog
+			self.tx_watchdog_updated.emit(tx_watchdog)
+
+	def _update_sub_mode(self, sub_mode):
+		if self.sub_mode != sub_mode:
+			self.sub_mode = sub_mode
+			self.sub_mode_updated.emit(sub_mode)
+
+	def _update_fast_mode(self, fast_mode):
+		if self.fast_mode != fast_mode:
+			self.fast_mode = fast_mode
+			self.fast_mode_updated.emit(fast_mode)
+
+
+class WSJTX(QtCore.QObject):
+	def __init__(self, listen_host = "127.0.0.1", listen_port = 2237, repeater = False, repeater_host = "127.0.0.1", repeater_port = 22370, parent = None):
+		QtCore.QObject.__init__(self, parent)
+		self.receiver = Receiver(host = listen_host, port = listen_port)
+		self.parser = Parser()
+		self.status = Status()
+
+		self.receiver.message_received.connect(self.parser.parse_message)
+		self.parser.status.connect(self.status.update)
+		if repeater:
+			self.repeater = Repeater(host = repeater_host, port = repeater_port)
+			self.receiver.message_received.connect(self.repeater.send_message)
+
+	@QtCore.Slot()
+	def start(self):
+		self.receiver.start()
+
+	@QtCore.Slot()
+	def stop(self):
+		self.receiver.stop()
+		self.receiver.wait()
+
+
 def print_heartbeat(unique_id, maximum_schema_number, version, revision):
 	print "heartbeat"
 	print "\tunique id " + unique_id
 	print "\tmaximum_schema_number " + str(maximum_schema_number)
 	print "\tversion " + version
 	print "\trevision " + revision
-
-def print_status(unique_id, frequency_Hz, mode, dx_call, report, tx_mode, tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode):
-	print "status"
-	print "\tunique id " + unique_id
-	print "\tfrequency " + str(frequency_Hz)
-	print "\tdx call " + str(dx_call)
 
 def print_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, delta_freqzency_Hz, mode, message_content):
 	print "decode"
@@ -256,6 +409,15 @@ def print_close(unique_id):
 def print_wspr_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, frequency_Hz, drift_Hz, callsign, grid, power_dBm):
 	print "wspr_decode"
 
+def print_dx_call_updated(dx_call):
+	print "DX Call: " + str(dx_call)
+
+def print_transmitting_updated(transmitting):
+	print "Transmitting: " + str(transmitting)
+
+def print_decoding_updated(decoding):
+	print "Decoding: " + str(decoding)
+
 def main(args):
 	app = QtGui.QApplication(args)
 
@@ -266,29 +428,24 @@ def main(args):
 	wid.setWindowTitle('Simple')
 	wid.show()
 
-	parser = WsjtxParser()
-	receiver = WsjtxReceiver(host = config.listen_host, port = config.listen_port)
-	repeater = WsjtxRepeater(host = config.repeater_host, port = config.repeater_port)
+	wsjtx = WSJTX(config.listen_host, config.listen_port, config.repeater, config.repeater_host, config.repeater_port)
 
-	receiver.message_received.connect(parser.parse_message)
-	if config.repeater:
-		print "Repeater active"
-		receiver.message_received.connect(repeater.send_message)
+	wsjtx.parser.heartbeat.connect(print_heartbeat)
+	wsjtx.parser.decode.connect(print_decode)
+	wsjtx.parser.clear.connect(print_clear)
+	wsjtx.parser.log_qso.connect(print_log_qso)
+	wsjtx.parser.close.connect(print_close)
+	wsjtx.parser.wspr_decode.connect(print_wspr_decode)
 
-	parser.heartbeat.connect(print_heartbeat)
-	parser.status.connect(print_status)
-	parser.decode.connect(print_decode)
-	parser.clear.connect(print_clear)
-	parser.log_qso.connect(print_log_qso)
-	parser.close.connect(print_close)
-	parser.wspr_decode.connect(print_wspr_decode)
+	wsjtx.status.dx_call_updated.connect(print_dx_call_updated)
+	wsjtx.status.transmitting_updated.connect(print_transmitting_updated)
+	wsjtx.status.decoding_updated.connect(print_decoding_updated)
 
-	receiver.start()
+	wsjtx.start()
 
 	result = app.exec_()
 
-	receiver.stop()
-	receiver.wait()
+	wsjtx.stop()
 
 	sys.exit(result)
 

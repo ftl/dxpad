@@ -42,6 +42,9 @@ class Locator:
 	def __eq__(self, other):
 		return hash(self) == hash(other)
 
+	def __ne__(self, other):
+		return hash(self) != hash(other)
+
 	def distance_to(self, other):
 		return self.to_lat_lon().distance_to(other.to_lat_lon())
 

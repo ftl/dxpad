@@ -83,6 +83,7 @@ class Infohub(QtCore.QObject):
 
 	@QtCore.Slot(object)
 	def lookup_call(self, call):
+		if not call: return
 		if call == self.own_call: return
 		if call in self: 
 			info = self[call]

@@ -41,6 +41,9 @@ class Call:
 	def __eq__(self, other):
 		return hash(self) == hash(other)
 
+	def __ne__(self, other):
+		return hash(self) != hash(other)
+
 	@staticmethod
 	def is_valid_call(call):
 		return len(CALL_EXPRESSION.findall(call)) == 1
