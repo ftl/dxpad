@@ -59,6 +59,7 @@ class SpotterContinentFilter:
         return filter(lambda source: source.source_dxcc_info and (source.source_dxcc_info.continent in self.continents), spot.sources)
 
     def spot_locators(self, spot):
+        if not(spot.dxcc_info): return []
         return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.1)]
 
     def add_heat(self, a, b):
