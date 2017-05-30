@@ -36,7 +36,7 @@ class BandMap(QtCore.QObject):
 		self.update_spots.emit(self.spots)
 
 	def _filter_spot(self, spot):
-		sources_on_continent = filter(lambda source: source.source_dxcc_info.continent in self.spotter_continents, spot.sources)
+		sources_on_continent = filter(lambda source: source.source_dxcc_info and (source.source_dxcc_info.continent in self.spotter_continents, spot.sources))
 		return len(sources_on_continent) > 0
 
 class OverviewBandmap(QtGui.QWidget):	
