@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
 from PySide import QtCore, QtGui
 
-import _notepad
+from . import _notepad
 
 class EntryLine(QtCore.QObject):
 	def __init__(self, notepad, max_note_length = 60, parent = None):
@@ -83,11 +83,11 @@ class EntryWindow(QtGui.QWidget):
 
 @QtCore.Slot(object)
 def print_line(line):
-	print "line: " + unicode(line)
+	print("line: " + str(line))
 
 @QtCore.Slot(object)
 def print_call(call):
-	print "call: " + str(call)
+	print("call: " + str(call))
 
 def main(args):
 	app = QtGui.QApplication(args)

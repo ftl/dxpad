@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, os, unittest
@@ -103,7 +103,7 @@ class TestLatLon(unittest.TestCase):
 				lat_lon = _location.LatLon(lat, lon)
 				h = hash(lat_lon)
 				if lat_lon in hashes:
-					print "conflict {}".format(lat_lon)
+					print("conflict {}".format(lat_lon))
 					conflicts.append(lat_lon)
 				else:
 					hashes.add(lat_lon)
@@ -198,10 +198,10 @@ class TestNotedQsos(unittest.TestCase):
 
 class TestCall(unittest.TestCase):
 	def assertCall(self, call, prefix, base_call, suffix, working_condition):
-		self.assertEquals(prefix, call.prefix)
-		self.assertEquals(base_call, call.base_call)
-		self.assertEquals(suffix, call.suffix)
-		self.assertEquals(working_condition, call.working_condition)
+		self.assertEqual(prefix, call.prefix)
+		self.assertEqual(base_call, call.base_call)
+		self.assertEqual(suffix, call.suffix)
+		self.assertEqual(working_condition, call.working_condition)
 
 	def test_find_all(self):
 		calls = _callinfo.Call.find_all("DL3NEY W1AW 9A1AA EA6/DJ9MH VE3/DL1NEO/9 DL3NY/HA2 DF2NK/p VK7/DK6MP/9/p", lambda m: m.group())

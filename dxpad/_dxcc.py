@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -34,7 +34,7 @@ For detailed information about handling of prefixes and suffixes see http://www.
 
 import sys, os, re, requests
 
-import _location, _config
+from . import _location, _config
 
 class DXCCInfo:
 	def __init__(self, name, cq_zone, itu_zone, continent, latlon, time_offset, primary_prefix):
@@ -175,6 +175,6 @@ def main():
 	dxcc.load()
 	for arg in sys.argv[1:]:
 		dxcc_info = dxcc.find_dxcc_info(arg)
-		print("{:<10} {}".format(arg, str(dxcc_info)))
+		print(("{:<10} {}".format(arg, str(dxcc_info))))
 
 if __name__ == "__main__": main()

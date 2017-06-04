@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, time, re, collections
 from PySide import QtCore, QtGui
 
-import _callinfo, _time
+from . import _callinfo, _time
 
 COLOR_TEXT = QtGui.QColor(0, 0, 0)
 COLOR_DIVIDER = QtGui.QColor(150, 150, 150)
@@ -26,7 +26,7 @@ class NotedLine:
         self.sections = sections
 
     def __str__(self):
-        return _time.z(self.timestamp) + ": " + "".join(map(lambda s: s.content, self.sections))
+        return _time.z(self.timestamp) + ": " + "".join([s.content for s in self.sections])
 
 class NotedQsos:
     class Qso(collections.namedtuple("QSO", "start end")):
@@ -500,7 +500,7 @@ class NotepadWindow(QtGui.QWidget):
 
 @QtCore.Slot(object)
 def print_added_calls(call):
-    print "call added: " + str(call)
+    print("call added: " + str(call))
 
 def main(args):
     app = QtGui.QApplication(args)

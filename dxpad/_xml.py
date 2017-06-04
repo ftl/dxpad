@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import xml.dom.minidom as minidom
@@ -9,7 +9,7 @@ class XMLDataElement:
 
 	@staticmethod
 	def from_string(s):
-		return XMLDataElement(minidom.parseString(unicode(s).encode("utf-8")))
+		return XMLDataElement(minidom.parseString(s))
 
 	def __getattr__(self, name):
 		if name.startswith("__") and name.endswith("__"): raise AttributeError(name)

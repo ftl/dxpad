@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, webbrowser
 from PySide import QtCore, QtGui
 
-import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, _config
+from . import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, _config
 
 class Infohub(QtCore.QObject):
 	info_changed = QtCore.Signal(object, object)
@@ -116,64 +116,64 @@ class CallinfoWidget(QtGui.QWidget):
 
 	def update_info(self, info):
 		self.info = info
-		label_text = u"<h1>{}</h1>".format(self.call)
+		label_text = "<h1>{}</h1>".format(self.call)
 		label_text += self._para(info.name)
 		if info.postal_address:
-			label_text += self._para(u"<br>".join(filter(lambda s: s != info.name, info.postal_address)))
+			label_text += self._para("<br>".join([s for s in info.postal_address if s != info.name]))
 
 		if info.dxcc_info:
-			tag_style = u"color: white; background: gray;"
-			label_text += self._div(u"".join([
-				u"<h3>{}</h3>".format(info.dxcc_info.name),
-				self._para(u" &nbsp; ".join([
-					self._span(u"{}".format(info.dxcc_info.continent), tag_style),
-					self._span(u"ITU {}".format(info.dxcc_info.itu_zone), tag_style),
-					self._span(u"CQ {}".format(info.dxcc_info.cq_zone), tag_style),
-					self._span(u"IOTA {}".format(info.iota) if info.iota else None, tag_style),
-					self._span(u"DOK {}".format(info.dok) if info.dok else None, tag_style)
+			tag_style = "color: white; background: gray;"
+			label_text += self._div("".join([
+				"<h3>{}</h3>".format(info.dxcc_info.name),
+				self._para(" &nbsp; ".join([
+					self._span("{}".format(info.dxcc_info.continent), tag_style),
+					self._span("ITU {}".format(info.dxcc_info.itu_zone), tag_style),
+					self._span("CQ {}".format(info.dxcc_info.cq_zone), tag_style),
+					self._span("IOTA {}".format(info.iota) if info.iota else None, tag_style),
+					self._span("DOK {}".format(info.dok) if info.dok else None, tag_style)
 				]))
 			]))
 
-		label_text += self._div(u"".join([
-			self._para(u"Loc: {}".format(info.locator)),
-			self._para(u"Lat/Lon: {}".format(info.latlon)),
-			self._para(u"Entfernung: {:.0f}km".format(info.distance_to(self.own_locator))),
-			self._para(u"Richtung: {:.1f}°".format(info.bearing_from(self.own_locator)))
+		label_text += self._div("".join([
+			self._para("Loc: {}".format(info.locator)),
+			self._para("Lat/Lon: {}".format(info.latlon)),
+			self._para("Entfernung: {:.0f}km".format(info.distance_to(self.own_locator))),
+			self._para("Richtung: {:.1f}°".format(info.bearing_from(self.own_locator)))
 		]))
 
 		if (info.qsl_service and len(info.qsl_service) > 0) or info.qsl_via:
-			tag_style = u"color: white; background: gray;"
-			label_text += self._div(u"".join(
-				filter(lambda s: s != None, [
-					self._para(u" &nbsp; ".join(
-						map(lambda s: self._span(s, tag_style), info.qsl_service)
+			tag_style = "color: white; background: gray;"
+			label_text += self._div("".join(
+				[s for s in [
+					self._para(" &nbsp; ".join(
+						[self._span(s, tag_style) for s in info.qsl_service]
 					)) if info.qsl_service and len(info.qsl_service) > 0 else None,
-					self._para(u"QSL via: {}".format(info.qsl_via)) if info.qsl_via else None
-			])))
+					self._para("QSL via: {}".format(info.qsl_via)) if info.qsl_via else None
+			] if s != None]))
 
 		if info.qrz_id or info.hamqth_id:
-			label_text += self._para(u", ".join(filter(lambda s: s != "", [
-				self._link(u"https://www.hamqth.com/{}", info.hamqth_id, u"HamQTH"),
-				self._link(u"https://qrz.com/db/{}", info.qrz_id, u"qrz")
-			])))
+			label_text += self._para(", ".join([s for s in [
+				self._link("https://www.hamqth.com/{}", info.hamqth_id, "HamQTH"),
+				self._link("https://qrz.com/db/{}", info.qrz_id, "qrz")
+			] if s != ""]))
 		if info.email:
-			label_text += self._para(self._link(u"mailto:{}", info.email, info.email))
+			label_text += self._para(self._link("mailto:{}", info.email, info.email))
 		label_text += "<hr>"
 		self.label.setText(label_text)
 
-	def _div(self, content, style = u"margin-top: 3px;"):
-		return u"<div style='{}'>{}</div>".format(style, content) if content else u""
+	def _div(self, content, style = "margin-top: 3px;"):
+		return "<div style='{}'>{}</div>".format(style, content) if content else ""
 
-	def _para(self, content, style = u"margin: 0;"):
-		return u"<p style='{}'>{}</p>".format(style, content) if content else u""
+	def _para(self, content, style = "margin: 0;"):
+		return "<p style='{}'>{}</p>".format(style, content) if content else ""
 
 	def _link(self, url_template, url_fillin, label):
-		if not url_fillin: return u""
+		if not url_fillin: return ""
 		url = url_template.format(url_fillin)
-		return u"<a href='{}'>{}</a>".format(url, label)
+		return "<a href='{}'>{}</a>".format(url, label)
 
-	def _span(self, content, style = u""):
-		return u"<span style='{}'>{}</span>".format(style, content) if content else u""
+	def _span(self, content, style = ""):
+		return "<span style='{}'>{}</span>".format(style, content) if content else ""
 
 class InfohubWidget(QtGui.QWidget):
 	def __init__(self, infohub, parent = None):
@@ -247,7 +247,7 @@ class InfohubWindow(QtGui.QWidget):
         self.line.setText("")
 
 def print_lookup(o):
-	print "looked up: " + str(o)
+	print("looked up: " + str(o))
 
 def main(args):
 	app = QtGui.QApplication(args)

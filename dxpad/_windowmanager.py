@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -22,7 +22,7 @@ What a mess...
 import sys, os, base64
 from PySide import QtCore, QtGui
 
-import _config
+from . import _config
 
 class WindowManager:
 	def __init__(self, parent = None):
@@ -30,12 +30,12 @@ class WindowManager:
 		self.windows = {}
 
 	def restore_window_geometry(self, window):
-		name = unicode(window.objectName())
+		name = str(window.objectName())
 		window.resize(self.settings.value(name + "/size", window.size()))
 		window.move(self.settings.value(name + "/pos", window.pos()))
 
 	def save_window_geometry(self, window):
-		name = unicode(window.objectName())
+		name = str(window.objectName())
 		self.settings.setValue(name + "/size", window.size())
 		self.settings.setValue(name + "/pos", window.pos())
 		self.settings.sync()

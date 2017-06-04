@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, time, re
 import telnetlib as tn
 from PySide import QtCore, QtGui
 
-import _dxcc, _config, _grid, _callinfo
+from . import _dxcc, _config, _grid, _callinfo
 
 class Spot:
 	def __init__(self, ttl, call, frequency, time, source_call, source_grid):
@@ -52,23 +52,23 @@ class TelnetClient:
 
 	def run(self, line_callback):
 		telnet = tn.Telnet(self.hostname, self.port)
-		print("Connected to {}:{}".format(self.hostname, self.port))
+		print(("Connected to {}:{}".format(self.hostname, self.port)))
 		self.running = True
 
 		buffer = ""
 		while self.running:
-			buffer += telnet.read_some()
+			buffer += telnet.read_some().decode("utf-8")
 			while buffer.find("\n") != -1:
 				line, buffer = buffer.split("\n", 1)
 				line_callback(line)
 			if buffer.endswith("Please enter your call: "):
-				telnet.write(self.call + "\n")
+				telnet.write(str(self.call + "\n").encode("utf-8"))
 			if buffer.endswith("callsign: "):
-				telnet.write(self.call + "\n")
+				telnet.write(str(self.call + "\n").encode("utf-8"))
 			if buffer.endswith("login: "):
-				telnet.write(self.call + "\n")
+				telnet.write(str(self.call + "\n").encode("utf-8"))
 			if buffer.endswith("password: "):
-				telnet.write(self.password + "\n")
+				telnet.write(str(self.password + "\n").encode("utf-8"))
 
 		telnet.close()
 
@@ -111,15 +111,15 @@ class ClusterSpotter:
 	def _line_received(self, line, spot_callback):
 		spot_match = self._spot_expression.match(line)
 		if not spot_match:
-			print line
+			print(line)
 			return
 
 		if not _callinfo.Call.is_valid_call(spot_match.group(4)):
-			print line
+			print(line)
 			return
 
 		if not _callinfo.Call.is_valid_call(spot_match.group(1)):
-			print line
+			print(line)
 			return
 		
 		call = _callinfo.Call(spot_match.group(4))
@@ -224,8 +224,8 @@ class SpotAggregator(QtCore.QObject):
 		now = time.time()
 		updated_spots = {}
 		spots_to_emit = []
-		for call in self.spots.keys():
-			spots_by_call = filter(lambda spot: now <= spot.timeout, self.spots[call])
+		for call in list(self.spots.keys()):
+			spots_by_call = [spot for spot in self.spots[call] if now <= spot.timeout]
 			if len(spots_by_call) > 0:
 				updated_spots[call] = spots_by_call
 				spots_to_emit.extend(spots_by_call)
@@ -256,9 +256,9 @@ class SpotAggregator(QtCore.QObject):
 
 @QtCore.Slot(object)
 def print_spots(spots):
-	print "Spots at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time())))
-	print "\n".join(map(lambda spot: str(spot), spots))
-	print ""
+	print("Spots at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
+	print("\n".join([str(spot) for spot in spots]))
+	print("")
 
 if __name__ == "__main__":
 	app = QtGui.QApplication(sys.argv)

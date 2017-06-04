@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -11,7 +11,7 @@ see http://ham.stackexchange.com/questions/221/how-can-one-convert-from-lat-long
 
 import sys, re, math
 
-import _location
+from . import _location
 
 LOCATOR_EXPRESSION = re.compile(r'[A-R]{2}([0-9]{2}([a-x]{2})?)?', re.IGNORECASE)
 
@@ -91,16 +91,16 @@ def main(args):
 			distance = locator.distance_to(locator2)
 			bearing_to = locator.bearing_to(locator2)
 			bearing_from = locator.bearing_from(locator2)
-			print("{!s} -> {!s}: {:.0f}km".format(locator, locator2, distance))
-			print("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_to))
-			print("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_from))
-			print("{!s} == {!s}: {}".format(locator, locator2, str(locator == locator2)))
+			print(("{!s} -> {!s}: {:.0f}km".format(locator, locator2, distance)))
+			print(("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_to)))
+			print(("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_from)))
+			print(("{!s} == {!s}: {}".format(locator, locator2, str(locator == locator2))))
 	else:
 		lat = float(args[1])
 		lon = float(args[2])
 		latlon = _location.LatLon(lat, lon)
 		locator = Locator.from_lat_lon(latlon)
 
-	print("{!s} = {!s}".format(locator, latlon))
+	print(("{!s} = {!s}".format(locator, latlon)))
 
 if __name__ == "__main__": main(sys.argv)

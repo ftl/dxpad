@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, os
 from PySide import QtCore
 
-import _grid, _callinfo
+from . import _grid, _callinfo
 
 DEFAULT_CALL = _callinfo.Call("dl0aaa")
 DEFAULT_LOCATOR = _grid.Locator("JO51aa")
@@ -27,16 +27,16 @@ def filename(name):
 
 class Account:
 	def __init__(self, user, password = None):
-		self.user = unicode(user).encode("utf-8")
+		self.user = user
 		if password:
-			self.password = unicode(password).encode("utf-8")
+			self.password = password
 		else:
 			self.password = None
 
 class Cluster(Account):
 	def __init__(self, host, port, user, password = None):
 		Account.__init__(self, user, password)
-		self.host = unicode(host).encode("utf-8")
+		self.host = host
 		self.port = int(port)
 
 class WSJTX:
@@ -137,6 +137,6 @@ def load_config():
 
 def main(args):
 	config = load_config()
-	print str(config)
+	print(str(config))
 
 if __name__ == "__main__": main(sys.argv)

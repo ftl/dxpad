@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -12,7 +12,7 @@ import sys, requests
 import xml.dom.minidom as minidom
 from PySide import QtCore, QtGui
 
-import _spotting, _callinfo, _grid, _location, _config
+from . import _spotting, _callinfo, _grid, _location, _config
 
 class PskReporterSpot(_spotting.Spot):
 	TTL = 600
@@ -33,14 +33,14 @@ class PskReporterWorker(QtCore.QThread):
 		self.grid = grid
 
 	def run(self):
-		print "PskReporter: fetch spots"
+		print("PskReporter: fetch spots")
 		response = requests.get("http://retrieve.pskreporter.info/query", params = {"senderCallsign": self.grid, "rronly": "1", "modify": "grid", "flowStartSeconds": "-600"})
 		if response.status_code != 200:
-			print "PskReporter: request failed"
-			print str(response.status_code)
-			print response.text
+			print("PskReporter: request failed")
+			print(str(response.status_code))
+			print(response.text)
 			return
-		xml_data = minidom.parseString(unicode(response.text).encode("utf-8"))
+		xml_data = minidom.parseString(response.text)
 		for element in xml_data.getElementsByTagName("receptionReport"):
 			if not (_callinfo.Call.is_valid_call(element.getAttribute("receiverCallsign")) 
 				and _grid.Locator.is_valid_locator(element.getAttribute("receiverLocator")) 
@@ -52,7 +52,7 @@ class PskReporterWorker(QtCore.QThread):
 			source_grid = _grid.Locator(element.getAttribute("receiverLocator"))
 			call = _callinfo.Call(element.getAttribute("senderCallsign"))
 			frequency = int(element.getAttribute("frequency")) / 1000
-			time = long(element.getAttribute("flowStartSeconds"))
+			time = int(element.getAttribute("flowStartSeconds"))
 			mode = element.getAttribute("mode")
 			snr = float(element.getAttribute("sNR")) if element.hasAttribute("sNR") else 0.0
 			normalized_snr = snr if snr >= 0.0 else self.MAX_SNR + snr
@@ -85,7 +85,7 @@ class PskReporter(QtCore.QObject):
 
 
 def print_spot(spot):
-	print str(spot)
+	print(str(spot))
 
 def main(args):
 	app = QtGui.QApplication(sys.argv)

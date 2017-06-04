@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -11,7 +11,7 @@ import sys, requests, collections
 import xml.dom.minidom as minidom
 from PySide import QtCore, QtGui
 
-import _callinfo, _grid, _location, _xml
+from . import _callinfo, _grid, _location, _xml
 
 def _is_not_empty(text):
 	return text and text.strip() != ""
@@ -26,7 +26,7 @@ class HamQTH:
 		if not self._login(): return None
 		response = self._get({"id": self.session.session_id, "callsign": str(call), "prg": "dxpad0.0"})
 		if not response:
-			print "HamQTH: query failed"
+			print("HamQTH: query failed")
 			return None
 		if response.error == "Session does not exist or expired": 
 			self.session = None
@@ -37,7 +37,7 @@ class HamQTH:
 		if self.session and self.session.Key: return True
 		response = self._get({"u": self.username, "p": self.password})
 		if not response:
-			print "HamQTH: login failed"
+			print("HamQTH: login failed")
 			return False
 		self.session = response.session
 		return self.session and self.session.session_id
@@ -45,9 +45,9 @@ class HamQTH:
 	def _get(self, params):
 		response = requests.get("https://www.hamqth.com/xml.php", params = params)
 		if response.status_code != 200:
-			print "HamQTH: request failed"
-			print str(response.status_code)
-			print response.text
+			print("HamQTH: request failed")
+			print(str(response.status_code))
+			print(response.text)
 			return None
 		return _xml.XMLDataElement.from_string(response.text)
 
@@ -58,8 +58,7 @@ class HamQTH:
 		result.hamqth_id = info.callsign
 		result.email = info.email
 		result.name = info.nick
-		result.postal_address = filter(lambda s: s != None and s.strip() != "", 
-			[info.adr_name, info.adr_street1, info.adr_street2, info.adr_street3, info.adr_city, info.adr_zip])
+		result.postal_address = [s for s in [info.adr_name, info.adr_street1, info.adr_street2, info.adr_street3, info.adr_city, info.adr_zip] if s != None and s.strip() != ""]
 		if info.latitude and info.longitude:
 			result.latlon = _location.LatLon(float(info.latitude), float(info.longitude))
 		if info.grid:
@@ -105,7 +104,7 @@ class AsyncHamQTH(QtCore.QThread):
 
 @QtCore.Slot(object)
 def print_call_info(call, info):
-	print str(call) + ": " + info.fname + " " + info.name + " from " + info.country
+	print(str(call) + ": " + info.fname + " " + info.name + " from " + info.country)
 
 def main(args):
 	if len(args) < 3: return
@@ -115,6 +114,6 @@ def main(args):
 	hamqth = HamQTH(args[1], args[2])
 	for call in args[3:]:
 		info = hamqth.lookup_call(_callinfo.Call(call))
-		print str(info)
+		print(str(info))
 
 if __name__ == "__main__": main(sys.argv)

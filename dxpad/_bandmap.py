@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, time
 from PySide import QtCore, QtGui
 
-import _spotting, _dxcc, _bandplan, _config, _windowmanager
+from . import _spotting, _dxcc, _bandplan, _config, _windowmanager
 
 COLOR_SPOT = QtGui.QColor(255, 120, 120)
 COLOR_BACKGROUND = QtGui.QColor(200, 200, 200)
@@ -32,11 +32,11 @@ class BandMap(QtCore.QObject):
 
 	@QtCore.Slot(object)
 	def spots_received(self, spots):
-		self.spots = filter(self._filter_spot, spots)
+		self.spots = list(filter(self._filter_spot, spots))
 		self.update_spots.emit(self.spots)
 
 	def _filter_spot(self, spot):
-		sources_on_continent = filter(lambda source: (source.source_dxcc_info and (source.source_dxcc_info.continent in self.spotter_continents)), spot.sources)
+		sources_on_continent = [source for source in spot.sources if (source.source_dxcc_info and (source.source_dxcc_info.continent in self.spotter_continents))]
 		return len(sources_on_continent) > 0
 
 class OverviewBandmap(QtGui.QWidget):	
@@ -147,7 +147,7 @@ class DetailedBandmap(QtGui.QWidget):
 
 	@QtCore.Slot(object)
 	def update_spots(self, spots):
-		self.spots = filter(lambda spot: spot.frequency >= self.from_kHz and spot.frequency <= self.to_kHz, spots)
+		self.spots = [spot for spot in spots if spot.frequency >= self.from_kHz and spot.frequency <= self.to_kHz]
 		self.repaint()
 
 class BandmapPainter:
@@ -219,7 +219,7 @@ class BandmapPainter:
 
 	def _find_free_level(self, x, width):
 		level = 0
-		last_x = sys.maxint
+		last_x = sys.maxsize
 		while last_x >= x:
 			if level in self.last_x_by_level:
 				last_x = self.last_x_by_level[level]
@@ -259,9 +259,9 @@ class BandmapWindow(_windowmanager.ManagedWindow):
 
 @QtCore.Slot(object)
 def print_bandmap(bandmap):
-	print "Bandmap at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time())))
-	print "\n".join(map(lambda spot: str(spot), bandmap))
-	print ""
+	print("Bandmap at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
+	print("\n".join([str(spot) for spot in bandmap]))
+	print("")
 
 if __name__ == "__main__":
 	app = QtGui.QApplication(sys.argv)

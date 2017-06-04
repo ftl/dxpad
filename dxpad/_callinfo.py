@@ -1,14 +1,14 @@
-#!/usr/bin/pyton
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, re, time
 
-import _time
+from . import _time
 
-QSL_BURO = u"Büro"
-QSL_DIRECT = u"direkt"
-QSL_LOTW = u"LotW"
-QSL_EQSL = u"eQSL"
+QSL_BURO = "Büro"
+QSL_DIRECT = "direkt"
+QSL_LOTW = "LotW"
+QSL_EQSL = "eQSL"
 
 CALL_EXPRESSION = re.compile(r'\b(([A-Z0-9]+)/)?([A-Z0-9]?[A-Z][0-9][A-Z0-9]*[A-Z])(/([A-Z0-9]+))?(/(P|A|M|MM|AM))?\b', re.IGNORECASE)
 
@@ -51,7 +51,7 @@ class Call:
 	@staticmethod
 	def find_all(text, map_func = lambda m: Call(m.group())):
 		matches = CALL_EXPRESSION.finditer(text)
-		return map(map_func, matches)
+		return list(map(map_func, matches))
 
 class Info:
 	def __init__(self, call):

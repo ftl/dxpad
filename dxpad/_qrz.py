@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -11,7 +11,7 @@ import sys, requests, collections
 import xml.dom.minidom as minidom
 from PySide import QtCore, QtGui
 
-import _callinfo, _grid, _location, _xml
+from . import _callinfo, _grid, _location, _xml
 
 class Qrz:
 	def __init__(self, username, password):
@@ -23,7 +23,7 @@ class Qrz:
 		if not self._login(): return None
 		response = self._get({"s": self.session.Key, "callsign": str(call)})
 		if not response:
-			print "QRZ: query failed"
+			print("QRZ: query failed")
 			return None
 		self.session = response.Session
 		if self.session.Error == "Session Timeout": return self.lookup_call(call)
@@ -33,7 +33,7 @@ class Qrz:
 		if self.session and self.session.Key: return True
 		response = self._get({"username": self.username, "password": self.password, "agent": "dxpad0.0"})
 		if not response:
-			print "QRZ: login failed"
+			print("QRZ: login failed")
 			return False
 		self.session = response.Session
 		return self.session and self.session.Key
@@ -41,9 +41,9 @@ class Qrz:
 	def _get(self, params):
 		response = requests.get("https://xmldata.qrz.com/xml/current/", params = params)
 		if response.status_code != 200:
-			print "QRZ: request failed"
-			print str(response.status_code)
-			print response.text
+			print("QRZ: request failed")
+			print(str(response.status_code))
+			print(response.text)
 			return None
 		return _xml.XMLDataElement.from_string(response.text)
 
@@ -54,8 +54,8 @@ class Qrz:
 		result.qrz_id = qrz_info.call
 		result.email = qrz_info.email
 		if qrz_info.fname or qrz_info.name:
-			result.name = " ".join(filter(lambda s: s != None, [qrz_info.fname, qrz_info.name]))
-		result.postal_address = filter(lambda s: s != None, [qrz_info.addr1, qrz_info.addr2, qrz_info.zip])
+			result.name = " ".join([s for s in [qrz_info.fname, qrz_info.name] if s != None])
+		result.postal_address = [s for s in [qrz_info.addr1, qrz_info.addr2, qrz_info.zip] if s != None]
 		if qrz_info.lat and qrz_info.lon:
 			result.latlon = _location.LatLon(float(qrz_info.lat), float(qrz_info.lon))
 		if qrz_info.grid:
@@ -96,7 +96,7 @@ class AsyncQrz(QtCore.QThread):
 
 @QtCore.Slot(object)
 def print_call_info(call, info):
-	print str(call) + ": " + info.fname + " " + info.name + " from " + info.country
+	print(str(call) + ": " + info.fname + " " + info.name + " from " + info.country)
 
 def main(args):
 	if len(args) < 3: return
@@ -106,6 +106,6 @@ def main(args):
 	qrz = Qrz(args[1], args[2])
 	for call in args[3:]:
 		info = qrz.lookup_call(_callinfo.Call(call))
-		print str(info)
+		print(str(info))
 
 if __name__ == "__main__": main(sys.argv)

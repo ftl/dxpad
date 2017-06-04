@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
 from PySide import QtGui
 
-import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager, _wsjtx
+from . import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, _hamqth, _qrz, _notepad, _entry, _config, _windowmanager, _wsjtx
 
 class MainWindow(_windowmanager.ManagedMainWindow):
 	def __init__(self, app, entry_line, notepad, infohub, parent = None):

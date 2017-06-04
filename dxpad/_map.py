@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, time, os
 from PySide import QtCore, QtGui, QtSvg
 
-import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _callinfo, _windowmanager
+from . import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _callinfo, _windowmanager
 
 
 """
@@ -56,7 +56,7 @@ class SpotterContinentFilter:
         self.continents = continents
 
     def filter_spot(self, spot):
-        return filter(lambda source: source.source_dxcc_info and (source.source_dxcc_info.continent in self.continents), spot.sources)
+        return [source for source in spot.sources if source.source_dxcc_info and (source.source_dxcc_info.continent in self.continents)]
 
     def spot_locators(self, spot):
         if not(spot.dxcc_info): return []
@@ -162,7 +162,7 @@ class Map(QtCore.QObject):
     @QtCore.Slot(object)
     def highlight_spots(self, spots):
         locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
-        filtered_spots = filter(self.spot_filter.filter_spot, filter(self._in_selected_band, spots))
+        filtered_spots = list(filter(self.spot_filter.filter_spot, list(filter(self._in_selected_band, spots))))
         for spot in filtered_spots:
             for locator, heat in self.spot_filter.spot_locators(spot):
                 locator_heatmap.add(locator, heat, self.spot_filter.add_heat)
@@ -320,12 +320,12 @@ class MapWindow(_windowmanager.ManagedWindow):
         self.map_widget = MapWidget(map)
 
         show_spots_received_on_selected_continents = QtGui.QRadioButton()
-        show_spots_received_on_selected_continents.setText(u"Empfangen in " + u", ".join(self.map.spot_filters[0].continents))
+        show_spots_received_on_selected_continents.setText("Empfangen in " + ", ".join(self.map.spot_filters[0].continents))
         show_spots_received_on_selected_continents.setChecked(True)
         show_spots_received_on_selected_continents.clicked.connect(self.map.show_spots_received_on_selected_continents)
 
         show_spots_receiving_selected_call = QtGui.QRadioButton()
-        show_spots_receiving_selected_call.setText(u"Meine Reichweite")
+        show_spots_receiving_selected_call.setText("Meine Reichweite")
         show_spots_receiving_selected_call.setChecked(False)
         show_spots_receiving_selected_call.clicked.connect(self.map.show_spots_receiving_selected_call)
 

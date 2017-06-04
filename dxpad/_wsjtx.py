@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys, socket, struct
 from PySide import QtCore, QtGui
 
-import _config, _callinfo, _grid
+from . import _config, _callinfo, _grid
 
 class IncomingMessage:
 	def __init__(self, data):
@@ -78,7 +78,7 @@ class IncomingMessage:
 		if length == 0xFFFFFFFF: return None
 		start = self.current_index
 		self.current_index += length
-		return unicode(self.data[start:(self.current_index)])
+		return str(self.data[start:(self.current_index)])
 
 
 class Parser(QtCore.QObject):
@@ -185,7 +185,7 @@ class Parser(QtCore.QObject):
 		self.wspr_decode.emit(unique_id, new, ms_since_midnight, snr, delta_time_seconds, frequency_Hz, drift_Hz, callsign, grid, power_dBm)
 
 	def _handle_unknown_message(self, message):
-		print "unknown message " + str(message.id)
+		print("unknown message " + str(message.id))
 
 class Receiver(QtCore.QThread):
 	message_received = QtCore.Signal(object, object)
@@ -387,36 +387,36 @@ class WSJTX(QtCore.QObject):
 
 
 def print_heartbeat(unique_id, maximum_schema_number, version, revision):
-	print "heartbeat"
-	print "\tunique id " + unique_id
-	print "\tmaximum_schema_number " + str(maximum_schema_number)
-	print "\tversion " + version
-	print "\trevision " + revision
+	print("heartbeat")
+	print("\tunique id " + unique_id)
+	print("\tmaximum_schema_number " + str(maximum_schema_number))
+	print("\tversion " + version)
+	print("\trevision " + revision)
 
 def print_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, delta_freqzency_Hz, mode, message_content):
-	print "decode"
-	print "\tmessage " + str(message_content)
+	print("decode")
+	print("\tmessage " + str(message_content))
 
 def print_clear(unique_id):
-	print "clear"
+	print("clear")
 
 def print_log_qso(unique_id, timestamp_begin, dx_call, dx_grid, frequency_Hz, mode, report_send, report_received, tx_power, comments, name, timestamp_end):
-	print "log qso"
+	print("log qso")
 
 def print_close(unique_id):
-	print "close"
+	print("close")
 
 def print_wspr_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, frequency_Hz, drift_Hz, callsign, grid, power_dBm):
-	print "wspr_decode"
+	print("wspr_decode")
 
 def print_dx_call_updated(dx_call):
-	print "DX Call: " + str(dx_call)
+	print("DX Call: " + str(dx_call))
 
 def print_transmitting_updated(transmitting):
-	print "Transmitting: " + str(transmitting)
+	print("Transmitting: " + str(transmitting))
 
 def print_decoding_updated(decoding):
-	print "Decoding: " + str(decoding)
+	print("Decoding: " + str(decoding))
 
 def main(args):
 	app = QtGui.QApplication(args)
