@@ -78,7 +78,7 @@ class IncomingMessage:
 		if length == 0xFFFFFFFF: return None
 		start = self.current_index
 		self.current_index += length
-		return str(self.data[start:(self.current_index)])
+		return self.data[start:(self.current_index)].decode("utf-8")
 
 
 class Parser(QtCore.QObject):

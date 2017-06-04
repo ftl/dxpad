@@ -43,6 +43,7 @@ class RbnSpot(Spot):
 		return Spot.__str__(self) + " rbn(mode: {}, snr: {}, speed: {}, type: {})".format(self.mode, self.snr, self.speed, self.rbnType)
 
 class TelnetClient:
+	ENCODING = "latin_1"
 	def __init__(self, hostname, port, call, password = ""):
 		self.hostname = hostname
 		self.port = port
@@ -52,23 +53,23 @@ class TelnetClient:
 
 	def run(self, line_callback):
 		telnet = tn.Telnet(self.hostname, self.port)
-		print(("Connected to {}:{}".format(self.hostname, self.port)))
+		print("Connected to {}:{}".format(self.hostname, self.port))
 		self.running = True
 
 		buffer = ""
 		while self.running:
-			buffer += telnet.read_some().decode("utf-8")
+			buffer += telnet.read_some().decode(self.ENCODING)
 			while buffer.find("\n") != -1:
 				line, buffer = buffer.split("\n", 1)
 				line_callback(line)
 			if buffer.endswith("Please enter your call: "):
-				telnet.write(str(self.call + "\n").encode("utf-8"))
+				telnet.write(str(self.call + "\n").encode(self.ENCODING))
 			if buffer.endswith("callsign: "):
-				telnet.write(str(self.call + "\n").encode("utf-8"))
+				telnet.write(str(self.call + "\n").encode(self.ENCODING))
 			if buffer.endswith("login: "):
-				telnet.write(str(self.call + "\n").encode("utf-8"))
+				telnet.write(str(self.call + "\n").encode(self.ENCODING))
 			if buffer.endswith("password: "):
-				telnet.write(str(self.password + "\n").encode("utf-8"))
+				telnet.write(str(self.password + "\n").encode(self.ENCODING))
 
 		telnet.close()
 

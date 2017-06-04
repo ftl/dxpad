@@ -61,7 +61,7 @@ class HamQTH:
 		result.postal_address = [s for s in [info.adr_name, info.adr_street1, info.adr_street2, info.adr_street3, info.adr_city, info.adr_zip] if s != None and s.strip() != ""]
 		if info.latitude and info.longitude:
 			result.latlon = _location.LatLon(float(info.latitude), float(info.longitude))
-		if info.grid:
+		if info.grid and _grid.Locator.is_valid_locator(info.grid):
 			result.locator = _grid.Locator(info.grid)
 		elif result.latlon:
 			result.locator = _grid.Locator.from_lat_lon(result.latlon)

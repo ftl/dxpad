@@ -16,11 +16,13 @@ class Call:
 	def __init__(self, raw_text):
 		if not Call.is_valid_call(raw_text): raise ValueError("{} is not a valid call.".format(raw_text))
 		match = CALL_EXPRESSION.match(raw_text)
+		if not(match):
+			print("Cannot find call: " + raw_text)
 		self.prefix = match.group(2).upper() if match.start(2) > -1 else None
 		self.base_call = match.group(3).upper()
 		self.suffix = match.group(5).upper() if match.start(5) > -1 else None
 		self.working_condition = match.group(7).upper() if match.start(7) > -1 else None
-		if self.suffix in ["P", "A", "M", "MM", "AM"] and not self.working_condition:
+		if self.suffix in ["P", "A", "M", "MMJO68", "AM"] and not self.working_condition:
 			self.working_condition = self.suffix
 			self.suffix = None
 
