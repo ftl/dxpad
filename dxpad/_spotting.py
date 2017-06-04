@@ -117,6 +117,10 @@ class ClusterSpotter:
 		if not _callinfo.Call.is_valid_call(spot_match.group(4)):
 			print line
 			return
+
+		if not _callinfo.Call.is_valid_call(spot_match.group(1)):
+			print line
+			return
 		
 		call = _callinfo.Call(spot_match.group(4))
 		frequency = float(spot_match.group(3))
