@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, time, re, collections
+import sys, time, re, collections, math
 from PySide import QtCore, QtGui
 
 from . import _callinfo, _time
@@ -227,7 +227,7 @@ class _NotepadPainter:
         self.widget = widget
         self.size = widget.size()
         self.line_height = painter.fontMetrics().boundingRect("Hg").height() + 2
-        self.visible_lines = (self.size.height() - 2) / self.line_height
+        self.visible_lines = math.floor((self.size.height() - 2) / self.line_height)
         self.timestamp_column_right = self.text_width("MMMMZ")
         self.divider_line_x = self.timestamp_column_right + 2
         self.content_column_left = self.timestamp_column_right + 4
