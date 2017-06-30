@@ -4,4 +4,4 @@
 import time
 
 def z(timestamp):
-	return time.strftime("%H%MZ", time.gmtime(timestamp))
+    return time.strftime("%H%MZ", time.gmtime(timestamp))
