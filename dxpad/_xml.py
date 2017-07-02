@@ -12,7 +12,8 @@ class XMLDataElement:
         return XMLDataElement(minidom.parseString(s))
 
     def __getattr__(self, name):
-        if name.startswith("__") and name.endswith("__"): raise AttributeError(name)
+        if name.startswith("__") and name.endswith("__"): 
+            raise AttributeError(name)
         return self[name]
 
     def __getitem__(self, key):

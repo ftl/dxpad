@@ -40,7 +40,9 @@ class Cluster(Account):
         self.port = int(port)
 
 class WSJTX:
-    def __init__(self, listen_host, listen_port, repeater, repeater_host, repeater_port):
+    def __init__(
+            self, listen_host, listen_port, repeater, repeater_host, 
+            repeater_port):
         self.listen_host = listen_host
         self.listen_port = listen_port
         self.repeater = repeater
@@ -50,9 +52,11 @@ class WSJTX:
 class Config:
     def __init__(self):
         self.filename = filename("config.ini")
-        self.settings = QtCore.QSettings(self.filename, QtCore.QSettings.IniFormat)
+        self.settings = QtCore.QSettings(
+            self.filename, QtCore.QSettings.IniFormat)
         self.call = _callinfo.Call(self.settings.value("call", DEFAULT_CALL))
-        self.locator = _grid.Locator(self.settings.value("locator", DEFAULT_LOCATOR))
+        self.locator = _grid.Locator(
+            self.settings.value("locator", DEFAULT_LOCATOR))
         self.clusters = self.get_clusters()
         self.hamqth = self.get_account("hamqth")
         self.qrz = self.get_account("qrz")
@@ -86,7 +90,8 @@ class Config:
         repeater_host = self.settings.value("repeater_host", "127.0.0.1")
         repeater_port = int(self.settings.value("repeater_port", 22370))
         self.settings.endGroup()
-        return WSJTX(listen_host, listen_port, repeater, repeater_host, repeater_port)
+        return WSJTX(
+            listen_host, listen_port, repeater, repeater_host, repeater_port)
 
     def is_empty(self):
         return len(self.settings.allKeys()) == 0
@@ -94,7 +99,8 @@ class Config:
     def write_default_values(self):
         self.call = _callinfo.Call(DEFAULT_CALL)
         self.locator = _grid.Locator(DEFAULT_LOCATOR)
-        self.clusters.append(Cluster("arcluster.reversebeacon.net", 7000, str(self.call), None))
+        self.clusters.append(
+            Cluster("arcluster.reversebeacon.net", 7000, str(self.call), None))
         self.hamqth = Account(DEFAULT_CALL, "superSecret")
         self.qrz = Account(DEFAULT_CALL, "superSecret")
 

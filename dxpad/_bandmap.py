@@ -3,7 +3,6 @@
 
 import sys, time
 from PySide import QtCore, QtGui
-
 from . import _spotting, _dxcc, _bandplan, _config, _windowmanager
 
 COLOR_SPOT = QtGui.QColor(255, 120, 120)
@@ -36,7 +35,11 @@ class BandMap(QtCore.QObject):
         self.update_spots.emit(self.spots)
 
     def _filter_spot(self, spot):
-        sources_on_continent = [source for source in spot.sources if (source.source_dxcc_info and (source.source_dxcc_info.continent in self.spotter_continents))]
+        sources_on_continent = [
+            source for source in spot.sources 
+            if source.source_dxcc_info 
+              and source.source_dxcc_info.continent in self.spotter_continents
+        ]
         return len(sources_on_continent) > 0
 
 class OverviewBandmap(QtGui.QWidget):   
@@ -56,7 +59,8 @@ class OverviewBandmap(QtGui.QWidget):
 
     def draw_widget(self, painter):
         size = self.size()
-        text_height = painter.fontMetrics().ascent() + painter.fontMetrics().descent()
+        text_height = (painter.fontMetrics().ascent()
+                     + painter.fontMetrics().descent())
         box = QtCore.QRect(0, 0, size.width(), size.height() - text_height - 2)
         pixPerKHz = box.width() / (self.to_kHz - self.from_kHz)
 
@@ -147,7 +151,10 @@ class DetailedBandmap(QtGui.QWidget):
 
     @QtCore.Slot(object)
     def update_spots(self, spots):
-        self.spots = [spot for spot in spots if spot.frequency >= self.from_kHz and spot.frequency <= self.to_kHz]
+        self.spots = [
+          spot for spot in spots 
+          if spot.frequency >= self.from_kHz and spot.frequency <= self.to_kHz
+        ]
         self.repaint()
 
 class BandmapPainter:
@@ -156,9 +163,13 @@ class BandmapPainter:
         self.widget = widget
 
         self.size = widget.size()
-        self.text_height = painter.fontMetrics().ascent() + painter.fontMetrics().descent()
-        self.frequency_box = QtCore.QRect(0, self.size.height() - 2 * self.text_height - 2 - 10, self.size.width(), self.text_height)
-        self.pix_per_kHz = self.frequency_box.width() / (widget.to_kHz - widget.from_kHz)
+        self.text_height = (painter.fontMetrics().ascent()
+                          + painter.fontMetrics().descent())
+        self.frequency_box = QtCore.QRect(
+            0, self.size.height() - 2 * self.text_height - 2 - 10, 
+            self.size.width(), self.text_height)
+        self.pix_per_kHz = (self.frequency_box.width()
+                             / (widget.to_kHz - widget.from_kHz))
         self.last_x_by_level = {}
 
     def text_width(self, text):
@@ -173,7 +184,9 @@ class BandmapPainter:
     def draw_portion(self, from_kHz, to_kHz, color):
         x = self.frequency_x(from_kHz)
         width = self.frequency_x(to_kHz) - x
-        rect = QtCore.QRect(x, self.frequency_box.y(), width, self.frequency_box.height())
+        rect = QtCore.QRect(
+            x, self.frequency_box.y(), 
+            width, self.frequency_box.height())
         self.painter.fillRect(rect, color)
 
     def draw_scale_tick(self, frequency, color):
@@ -198,20 +211,28 @@ class BandmapPainter:
     def mark_frequency(self, frequency, color):
         x = self.frequency_x(frequency)
         self.painter.setPen(color)
-        self.painter.drawLine(x, self.frequency_box.top(), x, self.frequency_box.top() + self.frequency_box.height() - 1)
+        self.painter.drawLine(
+            x, self.frequency_box.top(), 
+            x, self.frequency_box.top() + self.frequency_box.height() - 1)
 
     def draw_spot_label(self, spot, color):
         rect = self._find_spot_rect(spot)
         self.painter.setPen(color)
         self.painter.drawRect(rect)
-        self.painter.drawText(rect.x() + 2, rect.y() + self.text_height, str(spot.call))
+        self.painter.drawText(
+            rect.x() + 2, rect.y() + self.text_height, 
+            str(spot.call))
 
     def _find_spot_rect(self, spot):
         frequency_x = self.frequency_x(spot.frequency)
         width = self.text_width(spot.call) + 4
         height = self.text_height + 4
 
-        x = max(0, min(frequency_x - width / 2, self.frequency_box.width() - width - 1))
+        x = max(
+            0, 
+            min(
+                frequency_x - width / 2, 
+                self.frequency_box.width() - width - 1))
         level = self._find_free_level(x, width)
         y = self.frequency_box.top() - 1 - (level  + 1) * (height + 2)
 
@@ -259,7 +280,9 @@ class BandmapWindow(_windowmanager.ManagedWindow):
 
 @QtCore.Slot(object)
 def print_bandmap(bandmap):
-    print("Bandmap at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
+    print(
+        "Bandmap at {}:"
+        .format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
     print("\n".join([str(spot) for spot in bandmap]))
     print("")
 

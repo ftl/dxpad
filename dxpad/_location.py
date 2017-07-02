@@ -27,7 +27,8 @@ class LatLon:
         return hash((self.lat, self.lon))
 
     def __eq__(self, other):
-        return int(self.lat * 10000) == int(other.lat * 10000) and int(self.lon * 10000) == int(other.lon * 10000) 
+        return (int(self.lat * 10000) == int(other.lat * 10000) 
+            and int(self.lon * 10000) == int(other.lon * 10000)) 
 
     def __repr__(self):
         return "LatLon({:8.5f}, {:8.5f})".format(self.lat, self.lon)
@@ -39,7 +40,10 @@ class LatLon:
         radius = 6371 # km
         d_lat = math.radians(other.lat - self.lat)
         d_lon = math.radians(other.lon - self.lon)
-        a = math.pow(math.sin(d_lat / 2) , 2) + math.cos(math.radians(self.lat)) * math.cos(math.radians(other.lat)) * math.pow(math.sin(d_lon / 2), 2)
+        a = (math.pow(math.sin(d_lat / 2) , 2) 
+              + math.cos(math.radians(self.lat)) 
+                 * math.cos(math.radians(other.lat)) 
+                 * math.pow(math.sin(d_lon / 2), 2))
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return radius * c
 
@@ -48,7 +52,8 @@ class LatLon:
         lat2 = math.radians(other.lat)
         d_lon = math.radians(other.lon - self.lon)
         y = math.sin(d_lon) * math.cos(lat2)
-        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(d_lon)
+        x = (math.cos(lat1) * math.sin(lat2) 
+              - math.sin(lat1) * math.cos(lat2) * math.cos(d_lon))
         bearing = math.degrees(math.atan2(y, x))
         return (bearing + 360.0) % 360.0
 

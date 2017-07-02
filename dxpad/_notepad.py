@@ -26,7 +26,9 @@ class NotedLine:
         self.sections = sections
 
     def __str__(self):
-        return _time.z(self.timestamp) + ": " + "".join([s.content for s in self.sections])
+        return "{}: {}".format(
+            _time.z(self.timestamp), 
+            "".join([s.content for s in self.sections]))
 
 class NotedQsos:
     class Qso(collections.namedtuple("QSO", "start end")):
@@ -55,21 +57,26 @@ class NotedQsos:
         return new_qso
 
     def _find_insertion_index(self, line):
-        return self._bisect_qsos(line, 0, len(self.qsos), lambda i, q: -1, lambda s: s)
+        return self._bisect_qsos(
+            line, 0, len(self.qsos), lambda i, q: -1, lambda s: s)
 
     def is_in_qso(self, line):
         return self._find_qso(line)[1] != None
 
     def _find_qso(self, line):
-        return self._bisect_qsos(line, 0, len(self.qsos), lambda i, q: (i, q), lambda s: (s, None))
+        return self._bisect_qsos(
+            line, 0, len(self.qsos), lambda i, q: (i, q), lambda s: (s, None))
 
     def _bisect_qsos(self, line, start, end, found, not_found):
         if start >= end: return not_found(start)
         pivot = (start + end) / 2
         qso = self.qsos[pivot]
-        if line in qso: return found(pivot, qso)
-        elif qso.start > line: return self._bisect_qsos(line, start, pivot, found, not_found)
-        else: return self._bisect_qsos(line, pivot + 1, end, found, not_found) 
+        if line in qso: 
+            return found(pivot, qso)
+        elif qso.start > line: 
+            return self._bisect_qsos(line, start, pivot, found, not_found)
+        else: 
+            return self._bisect_qsos(line, pivot + 1, end, found, not_found) 
 
     def remove_qso(self, line):
         qso = self._find_qso(line)[1]
@@ -148,7 +155,8 @@ class Notepad(QtCore.QObject):
             match_start = match.start()
             match_end = match.end()
             if match_start > next_char:
-                sections.append(Section("text", raw_text[next_char:match_start]))
+                sections.append(
+                    Section("text", raw_text[next_char:match_start]))
             call = _callinfo.Call(raw_text[match_start:match_end])
             sections.append(Section("call", str(call), call))
             self.call_added.emit(call)
@@ -226,28 +234,38 @@ class _NotepadPainter:
         self.painter = painter
         self.widget = widget
         self.size = widget.size()
-        self.line_height = painter.fontMetrics().boundingRect("Hg").height() + 2
-        self.visible_lines = math.floor((self.size.height() - 2) / self.line_height)
+        self.line_height = (painter.fontMetrics().boundingRect("Hg").height() 
+                             + 2)
+        self.visible_lines = math.floor(
+            (self.size.height() - 2) / self.line_height)
         self.timestamp_column_right = self.text_width("MMMMZ")
         self.divider_line_x = self.timestamp_column_right + 2
         self.content_column_left = self.timestamp_column_right + 4
-        self.clip_visible_lines_rect = QtCore.QRect(0, 1, self.size.width(), self.visible_lines * self.line_height)
-        self.clip_all_rect = QtCore.QRect(0, 0, self.size.width(), self.size.height())
+        self.clip_visible_lines_rect = QtCore.QRect(
+            0, 1, self.size.width(), self.visible_lines * self.line_height)
+        self.clip_all_rect = QtCore.QRect(
+            0, 0, self.size.width(), self.size.height())
 
     def text_width(self, text):
         return self.painter.fontMetrics().width(text)
 
     def content_line_rect(self, line_index):
-        return QtCore.QRect(self.content_column_left, self.line_top(line_index), self.size.width() - self.content_column_left - 1, self.line_height)
+        return QtCore.QRect(
+            self.content_column_left, self.line_top(line_index), 
+            self.size.width() - self.content_column_left - 1, self.line_height)
 
     def timestamp_line_rect(self, line_index):
-        return QtCore.QRect(0, self.line_top(line_index), self.timestamp_column_right, self.line_height)
+        return QtCore.QRect(
+            0, self.line_top(line_index), 
+            self.timestamp_column_right, self.line_height)
 
     def line_top(self, line_index):
         return self.line_height * line_index + 1
 
     def text_rect(self, line_rect):
-        return QtCore.QRect(line_rect.x() + 2, line_rect.y() + 1, line_rect.width() - 4, line_rect.height() - 2)
+        return QtCore.QRect(
+            line_rect.x() + 2, line_rect.y() + 1, 
+            line_rect.width() - 4, line_rect.height() - 2)
 
     def clip_visible_lines(self):
         self.painter.setClipRect(self.clip_visible_lines_rect)
@@ -256,18 +274,23 @@ class _NotepadPainter:
         self.painter.setClipRect(self.clip_all_rect)
 
     def draw_background(self):
-        self.painter.fillRect(QtCore.QRect(0, 0, self.size.width(), self.size.height()), COLOR_BACKGROUND)
+        self.painter.fillRect(
+            QtCore.QRect(0, 0, self.size.width(), self.size.height()), 
+            COLOR_BACKGROUND)
 
     def draw_divider(self):
         self.painter.setPen(COLOR_DIVIDER)
-        self.painter.drawLine(self.divider_line_x, 0, self.divider_line_x, self.size.height());
+        self.painter.drawLine(
+            self.divider_line_x, 0, self.divider_line_x, self.size.height())
 
     def draw_timestamp(self, line_index, text, divider_above):
         line_rect = self.timestamp_line_rect(line_index)
         text_rect = self.text_rect(line_rect)
         if divider_above:
             self.painter.setPen(COLOR_DIVIDER)
-            self.painter.drawLine(line_rect.x(), line_rect.y(), self.divider_line_x - line_rect.x(), line_rect.y())
+            self.painter.drawLine(
+                line_rect.x(), line_rect.y(), 
+                self.divider_line_x - line_rect.x(), line_rect.y())
         self.painter.setPen(COLOR_TIMESTAMP)
         self.painter.drawText(text_rect, QtCore.Qt.AlignRight, text)
 
@@ -281,7 +304,8 @@ class _NotepadPainter:
         x = text_rect.x()
         y = text_rect.y()
         for section in sections:
-            section_rect = self.painter.fontMetrics().boundingRect(section.content)
+            section_rect = self.painter.fontMetrics().boundingRect(
+                section.content)
             section_rect.moveTo(x, y)
             section_rect.setWidth(self.text_width(section.content))
             if section.kind in text_colors:
@@ -289,13 +313,18 @@ class _NotepadPainter:
             else:
                 text_color = COLOR_TEXT
             self.painter.setPen(text_color)
-            self.painter.drawText(section_rect, QtCore.Qt.AlignLeft, section.content)
+            self.painter.drawText(
+                section_rect, QtCore.Qt.AlignLeft, section.content)
             x += section_rect.width()
 
     def draw_qso_frame(self, start_index, end_index):
         start_line_rect = self.content_line_rect(start_index)
         end_line_rect = self.content_line_rect(end_index)
-        rect = QtCore.QRect(start_line_rect.x(), start_line_rect.y(), start_line_rect.width(), end_line_rect.y() + end_line_rect.height() - start_line_rect.y() - 1)
+        rect = QtCore.QRect(
+            start_line_rect.x(), start_line_rect.y(), 
+            start_line_rect.width(), 
+            end_line_rect.y() + end_line_rect.height() 
+                - start_line_rect.y() - 1)
         pen = QtGui.QPen(COLOR_DIVIDER)
         pen.setWidth(2)
         self.painter.setPen(pen)
@@ -356,17 +385,21 @@ class _PlainNotepadWidget(QtGui.QWidget):
         for line in lines:
             timestamp = _time.z(line.timestamp)
             if timestamp != last_timestamp:
-                notepad_painter.draw_timestamp(line_index, timestamp, last_timestamp != "")
+                notepad_painter.draw_timestamp(
+                    line_index, timestamp, last_timestamp != "")
                 last_timestamp = timestamp
 
             line_in_qso = self.notepad.is_line_in_qso(line_index + top_line)
-            notepad_painter.draw_content(line_index, line.sections, line_in_qso)
+            notepad_painter.draw_content(
+                line_index, line.sections, line_in_qso)
             line_index += 1
 
         for qso in self.notepad.get_qsos(max(0, top_line), bottom_line):
-            notepad_painter.draw_qso_frame(qso.start - top_line, qso.end - top_line)
+            notepad_painter.draw_qso_frame(
+                qso.start - top_line, qso.end - top_line)
 
-        if self.notepad.cursor >= max(0, top_line) and self.notepad.cursor <= bottom_line:
+        if (self.notepad.cursor >= max(0, top_line) 
+                and self.notepad.cursor <= bottom_line):
             notepad_painter.draw_cursor(self.notepad.cursor - top_line)
 
         self.line_height = notepad_painter.line_height
@@ -379,7 +412,9 @@ class _PlainNotepadWidget(QtGui.QWidget):
         if self.line_height <= 0: 
             e.ignore()
             return
-        bottom_line = len(self.notepad) - 1 if self.stick_to_bottom else self.bottom_line
+        bottom_line = (len(self.notepad) - 1 
+                       if self.stick_to_bottom 
+                       else self.bottom_line)
         tail = 1 #self.size().height() % self.line_height
         line_on_page = (e.y() - tail) / self.line_height
         line_index = bottom_line - self.visible_lines + line_on_page + 1
@@ -397,10 +432,12 @@ class NotepadWidget(QtGui.QFrame):
         self.notepad.qso_changed.connect(self._qso_changed)
 
         self.plain_widget = _PlainNotepadWidget(self.notepad, self)
-        self.plain_widget.update_visible_lines.connect(self._update_visible_lines)
+        self.plain_widget.update_visible_lines.connect(
+            self._update_visible_lines)
         self.plain_widget.line_clicked.connect(self._line_clicked)
 
-        self.scroll_bar = QtGui.QScrollBar(QtCore.Qt.Orientation.Vertical, self)
+        self.scroll_bar = QtGui.QScrollBar(
+            QtCore.Qt.Orientation.Vertical, self)
         self.scroll_bar.setMinimum(0)
         self.scroll_bar.setMaximum(len(notepad))
         self.scroll_bar.setPageStep(0)
@@ -417,7 +454,8 @@ class NotepadWidget(QtGui.QFrame):
         self.setLineWidth(1)
 
     def _line_added(self, line):
-        self._update_scroll_bar(len(self.notepad), self.scroll_bar.pageStep(), True)
+        self._update_scroll_bar(
+            len(self.notepad), self.scroll_bar.pageStep(), True)
         self.plain_widget.scroll_to_bottom()
 
     @QtCore.Slot(int)

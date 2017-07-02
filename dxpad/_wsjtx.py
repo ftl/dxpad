@@ -63,7 +63,8 @@ class IncomingMessage:
             offset = self.read_quint32()
         else:
             offset = 0
-        seconds_since_epoc = int((julian_day - 2440587.5) * 86400.0 + (ms_since_midnight / 1000.0))
+        seconds_since_epoc = int(
+            (julian_day - 2440587.5) * 86400.0 + (ms_since_midnight / 1000.0))
         return seconds_since_epoc
 
     def read_float(self):
@@ -83,12 +84,16 @@ class IncomingMessage:
 
 class Parser(QtCore.QObject):
     heartbeat = QtCore.Signal(str, int, str, str)
-    status = QtCore.Signal(str, int, str, str, str, str, bool, bool, bool, int, int, str, str, str, bool, str, bool)
+    status = QtCore.Signal(
+        str, int, str, str, str, str, bool, bool, bool, int, int, str, str, 
+        str, bool, str, bool)
     decode = QtCore.Signal(str, bool, int, int, float, int, str, str)
     clear = QtCore.Signal(str)
-    log_qso = QtCore.Signal(str, int, str, str, int, str, str, str, str, str, str, int)
+    log_qso = QtCore.Signal(
+        str, int, str, str, int, str, str, str, str, str, str, int)
     close = QtCore.Signal(str)
-    wspr_decode = QtCore.Signal(str, bool, int, int, float, int, int, str, str, int)
+    wspr_decode = QtCore.Signal(
+        str, bool, int, int, float, int, int, str, str, int)
 
     def __init__(self, parent = None):
         QtCore.QObject.__init__(self, parent)
@@ -115,7 +120,8 @@ class Parser(QtCore.QObject):
         maximum_schema_number = message.read_quint32()
         version = message.read_utf8()
         revision = message.read_utf8()
-        self.heartbeat.emit(unique_id, maximum_schema_number, version, revision)
+        self.heartbeat.emit(
+            unique_id, maximum_schema_number, version, revision)
 
     def _read_status(self, message):
         unique_id = message.read_utf8()
@@ -135,7 +141,10 @@ class Parser(QtCore.QObject):
         tx_watchdog = message.read_bool()
         sub_mode = message.read_utf8()
         fast_mode = message.read_bool()
-        self.status.emit(unique_id, frequency_Hz, mode, dx_call, report, tx_mode, tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode)
+        self.status.emit(
+            unique_id, frequency_Hz, mode, dx_call, report, tx_mode, 
+            tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, 
+            de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode)
 
     def _read_decode(self, message):
         unique_id = message.read_utf8()
@@ -146,7 +155,9 @@ class Parser(QtCore.QObject):
         delta_freqzency_Hz = message.read_quint32()
         mode = message.read_utf8()
         message_content = message.read_utf8()
-        self.decode.emit(unique_id, new, ms_since_midnight, snr, delta_time_seconds, delta_freqzency_Hz, mode, message_content)
+        self.decode.emit(
+            unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
+            delta_freqzency_Hz, mode, message_content)
 
     def _read_clear(self, message):
         unique_id = message.read_utf8()
@@ -165,7 +176,10 @@ class Parser(QtCore.QObject):
         comments = message.read_utf8()
         name = message.read_utf8()
         timestamp_end = message.read_datetime()
-        self.log_qso.emit(unique_id, timestamp_begin, dx_call, dx_grid, frequency_Hz, mode, report_send, report_received, tx_power, comments, name, timestamp_end)
+        self.log_qso.emit(
+            unique_id, timestamp_begin, dx_call, dx_grid, frequency_Hz, mode, 
+            report_send, report_received, tx_power, comments, name, 
+            timestamp_end)
 
     def _read_close(self, message):
         unique_id = message.read_utf8()
@@ -182,7 +196,9 @@ class Parser(QtCore.QObject):
         callsign = message.read_utf8()
         grid = message.read_utf8()
         power_dBm = message.read_quint32()
-        self.wspr_decode.emit(unique_id, new, ms_since_midnight, snr, delta_time_seconds, frequency_Hz, drift_Hz, callsign, grid, power_dBm)
+        self.wspr_decode.emit(
+            unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
+            frequency_Hz, drift_Hz, callsign, grid, power_dBm)
 
     def _handle_unknown_message(self, message):
         print("unknown message " + str(message.id))
@@ -262,8 +278,13 @@ class Status(QtCore.QObject):
         self.sub_mode = None
         self.fast_mode = False
 
-    @QtCore.Slot(str, int, str, str, str, str, bool, bool, bool, int, int, str, str, str, bool, str, bool)
-    def update(self, unique_id, frequency_Hz, mode, dx_call, report, tx_mode, tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode):
+    @QtCore.Slot(
+        str, int, str, str, str, str, bool, bool, bool, int, int, str, str, 
+        str, bool, str, bool)
+    def update(
+            self, unique_id, frequency_Hz, mode, dx_call, report, tx_mode, 
+            tx_enabled, transmitting, decoding, rx_df, tx_df, de_call, 
+            de_grid, dx_grid, tx_watchdog, sub_mode, fast_mode):
         self.unique_id = unique_id
         self._update_frequency_Hz(frequency_Hz)
         self._update_mode(mode)
@@ -364,7 +385,10 @@ class Status(QtCore.QObject):
 
 
 class WSJTX(QtCore.QObject):
-    def __init__(self, listen_host = "127.0.0.1", listen_port = 2237, repeater = False, repeater_host = "127.0.0.1", repeater_port = 22370, parent = None):
+    def __init__(
+            self, listen_host = "127.0.0.1", listen_port = 2237, 
+            repeater = False, repeater_host = "127.0.0.1", 
+            repeater_port = 22370, parent = None):
         QtCore.QObject.__init__(self, parent)
         self.receiver = Receiver(host = listen_host, port = listen_port)
         self.parser = Parser()
@@ -373,7 +397,8 @@ class WSJTX(QtCore.QObject):
         self.receiver.message_received.connect(self.parser.parse_message)
         self.parser.status.connect(self.status.update)
         if repeater:
-            self.repeater = Repeater(host = repeater_host, port = repeater_port)
+            self.repeater = Repeater(
+                host = repeater_host, port = repeater_port)
             self.receiver.message_received.connect(self.repeater.send_message)
 
     @QtCore.Slot()
@@ -393,20 +418,26 @@ def print_heartbeat(unique_id, maximum_schema_number, version, revision):
     print("\tversion " + version)
     print("\trevision " + revision)
 
-def print_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, delta_freqzency_Hz, mode, message_content):
+def print_decode(
+        unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
+        delta_freqzency_Hz, mode, message_content):
     print("decode")
     print("\tmessage " + str(message_content))
 
 def print_clear(unique_id):
     print("clear")
 
-def print_log_qso(unique_id, timestamp_begin, dx_call, dx_grid, frequency_Hz, mode, report_send, report_received, tx_power, comments, name, timestamp_end):
+def print_log_qso(
+        unique_id, timestamp_begin, dx_call, dx_grid, frequency_Hz, mode, 
+        report_send, report_received, tx_power, comments, name, timestamp_end):
     print("log qso")
 
 def print_close(unique_id):
     print("close")
 
-def print_wspr_decode(unique_id, new, ms_since_midnight, snr, delta_time_seconds, frequency_Hz, drift_Hz, callsign, grid, power_dBm):
+def print_wspr_decode(
+        unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
+        frequency_Hz, drift_Hz, callsign, grid, power_dBm):
     print("wspr_decode")
 
 def print_dx_call_updated(dx_call):
@@ -428,7 +459,9 @@ def main(args):
     wid.setWindowTitle('Simple')
     wid.show()
 
-    wsjtx = WSJTX(config.listen_host, config.listen_port, config.repeater, config.repeater_host, config.repeater_port)
+    wsjtx = WSJTX(
+        config.listen_host, config.listen_port, config.repeater, 
+        config.repeater_host, config.repeater_port)
 
     wsjtx.parser.heartbeat.connect(print_heartbeat)
     wsjtx.parser.decode.connect(print_decode)

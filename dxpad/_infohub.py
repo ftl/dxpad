@@ -11,7 +11,9 @@ class Infohub(QtCore.QObject):
     call_looked_up = QtCore.Signal(object)
     locator_looked_up = QtCore.Signal(object)
 
-    def __init__(self, dxcc, callbooks = [], own_call = _config.DEFAULT_CALL, own_locator = _config.DEFAULT_LOCATOR, parent = None):
+    def __init__(
+            self, dxcc, callbooks = [], own_call = _config.DEFAULT_CALL, 
+            own_locator = _config.DEFAULT_LOCATOR, parent = None):
         QtCore.QObject.__init__(self, parent)
         self.callinfos = {}
         self.dxcc = dxcc
@@ -51,7 +53,10 @@ class Infohub(QtCore.QObject):
             existing_info.hamqth_id = info.hamqth_id
         if not existing_info.name:
             existing_info.name = info.name
-        if info.postal_address and (not existing_info.postal_address or len(existing_info.postal_address) < len(info.postal_address)):
+        if (info.postal_address 
+                and (not existing_info.postal_address 
+                    or len(existing_info.postal_address) 
+                        < len(info.postal_address))):
             existing_info.postal_address = info.postal_address
         if not existing_info.postal_address:
             existing_info.postal_address = info.postal_address
@@ -119,26 +124,41 @@ class CallinfoWidget(QtGui.QWidget):
         label_text = "<h1>{}</h1>".format(self.call)
         label_text += self._para(info.name)
         if info.postal_address:
-            label_text += self._para("<br>".join([s for s in info.postal_address if s != info.name]))
+            label_text += self._para(
+                "<br>".join([s for s in info.postal_address if s != info.name]))
 
         if info.dxcc_info:
             tag_style = "color: white; background: gray;"
             label_text += self._div("".join([
                 "<h3>{}</h3>".format(info.dxcc_info.name),
                 self._para(" &nbsp; ".join([
-                    self._span("{}".format(info.dxcc_info.continent), tag_style),
-                    self._span("ITU {}".format(info.dxcc_info.itu_zone), tag_style),
-                    self._span("CQ {}".format(info.dxcc_info.cq_zone), tag_style),
-                    self._span("IOTA {}".format(info.iota) if info.iota else None, tag_style),
-                    self._span("DOK {}".format(info.dok) if info.dok else None, tag_style)
+                    self._span(
+                        "{}"
+                        .format(info.dxcc_info.continent), tag_style),
+                    self._span(
+                        "ITU {}"
+                        .format(info.dxcc_info.itu_zone), tag_style),
+                    self._span(
+                        "CQ {}"
+                        .format(info.dxcc_info.cq_zone), tag_style),
+                    self._span(
+                        "IOTA {}"
+                        .format(info.iota) if info.iota else None, tag_style),
+                    self._span(
+                        "DOK {}"
+                        .format(info.dok) if info.dok else None, tag_style)
                 ]))
             ]))
 
         label_text += self._div("".join([
             self._para("Loc: {}".format(info.locator)),
             self._para("Lat/Lon: {}".format(info.latlon)),
-            self._para("Entfernung: {:.0f}km".format(info.distance_to(self.own_locator))),
-            self._para("Richtung: {:.1f}°".format(info.bearing_from(self.own_locator)))
+            self._para(
+                "Entfernung: {:.0f}km"
+                .format(info.distance_to(self.own_locator))),
+            self._para(
+                "Richtung: {:.1f}°"
+                .format(info.bearing_from(self.own_locator)))
         ]))
 
         if (info.qsl_service and len(info.qsl_service) > 0) or info.qsl_via:
@@ -157,7 +177,8 @@ class CallinfoWidget(QtGui.QWidget):
                 self._link("https://qrz.com/db/{}", info.qrz_id, "qrz")
             ] if s != ""]))
         if info.email:
-            label_text += self._para(self._link("mailto:{}", info.email, info.email))
+            label_text += self._para(
+                self._link("mailto:{}", info.email, info.email))
         label_text += "<hr>"
         self.label.setText(label_text)
 
@@ -193,7 +214,8 @@ class InfohubWidget(QtGui.QWidget):
         frame.setLayout(self.info_parent)
         self.scroll_area = QtGui.QScrollArea()
         self.scroll_area.setWidget(frame)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(self._scroll_to_bottom)
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(
+            self._scroll_to_bottom)
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(self.scroll_area)
         vbox.setContentsMargins(0, 0, 0, 0)

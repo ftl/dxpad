@@ -4,7 +4,8 @@
 import sys, time, os
 from PySide import QtCore, QtGui, QtSvg
 
-from . import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, _config, _callinfo, _windowmanager
+from . import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, \
+              _config, _callinfo, _windowmanager
 
 
 """
@@ -23,7 +24,8 @@ add_marker(LatLon, kind)
 remove_marker(LatLon, kind)
 """
 
-HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
+HEAT_COLORS = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 255, 0), 
+               (255, 0, 0)]
 
 class LocatorHeatmap:
     MAX_HEAT = 1.0
@@ -38,7 +40,9 @@ class LocatorHeatmap:
 
     def _to_coordinates(self, locator):
         latlon = locator.to_lat_lon()
-        return _location.LatLon(int(latlon.lat) - int(latlon.lat) % self.cell_height, int(latlon.lon) - int(latlon.lon) % self.cell_width)
+        return _location.LatLon(
+            int(latlon.lat) - int(latlon.lat) % self.cell_height, 
+            int(latlon.lon) - int(latlon.lon) % self.cell_width)
 
     def _add_heat(self, coordinates, heat, add):
         current_heat = self._heat(coordinates)
@@ -56,7 +60,10 @@ class SpotterContinentFilter:
         self.continents = continents
 
     def filter_spot(self, spot):
-        return [source for source in spot.sources if source.source_dxcc_info and (source.source_dxcc_info.continent in self.continents)]
+        return [
+            source for source in spot.sources 
+            if source.source_dxcc_info 
+                and (source.source_dxcc_info.continent in self.continents)]
 
     def spot_locators(self, spot):
         if not(spot.dxcc_info): return []
@@ -84,7 +91,8 @@ class ReceivingCallFilter:
             if source.source_grid:
                 grid = source.source_grid
             else:
-                grid = _grid.Locator.from_lat_lon(source.source_dxcc_info.latlon)
+                grid = _grid.Locator.from_lat_lon(
+                    source.source_dxcc_info.latlon)
             return (grid, heat)
         return [to_grid_heat_tuple(source) for source in spot.sources]
 
@@ -95,7 +103,8 @@ class ReceivingCallFilter:
 class Map(QtCore.QObject):
     changed = QtCore.Signal()
 
-    def __init__(self, spot_cell_width = 5, spot_cell_height = 5, parent = None):
+    def __init__(
+            self, spot_cell_width = 5, spot_cell_height = 5, parent = None):
         QtCore.QObject.__init__(self, parent)
         self.spot_cell_width = spot_cell_width
         self.spot_cell_height = spot_cell_height
@@ -104,7 +113,9 @@ class Map(QtCore.QObject):
         self.grayline_visible = True
         self.own_locator = None
         self.destination_locator = None
-        self.locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
+        self.locator_heatmap = LocatorHeatmap(
+            cell_width = self.spot_cell_width, 
+            cell_height = self.spot_cell_height)
         self.band = _bandplan.IARU_REGION_1[5]
         self.spot_filters = [SpotterContinentFilter(), ReceivingCallFilter()]
         self.spot_filter = self.spot_filters[0]
@@ -161,8 +172,12 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def highlight_spots(self, spots):
-        locator_heatmap = LocatorHeatmap(cell_width = self.spot_cell_width, cell_height = self.spot_cell_height)
-        filtered_spots = list(filter(self.spot_filter.filter_spot, list(filter(self._in_selected_band, spots))))
+        locator_heatmap = LocatorHeatmap(
+            cell_width = self.spot_cell_width, 
+            cell_height = self.spot_cell_height)
+        filtered_spots = list(
+            filter(self.spot_filter.filter_spot, 
+                list(filter(self._in_selected_band, spots))))
         for spot in filtered_spots:
             for locator, heat in self.spot_filter.spot_locators(spot):
                 locator_heatmap.add(locator, heat, self.spot_filter.add_heat)
@@ -178,7 +193,9 @@ class MapWidget(QtGui.QWidget):
         QtGui.QWidget.__init__(self, parent)
         self.map = map
         self.map.changed.connect(self.repaint)
-        self.world_graphic = QtSvg.QGraphicsSvgItem(os.path.join(os.path.dirname(os.path.abspath(__file__)), "map.svg"))
+        self.world_graphic = QtSvg.QGraphicsSvgItem(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "map.svg"))
 
     def paintEvent(self, event):
         painter = QtGui.QPainter()
@@ -194,12 +211,17 @@ class MapWidget(QtGui.QWidget):
         size = self.size()
         height_for_width = int(size.width() / 2)
         width_for_height = size.height() * 2
-        if height_for_width <= size.height(): return QtCore.QSize(size.width(), height_for_width)
-        else: return QtCore.QSize(width_for_height, size.height())
+        if height_for_width <= size.height(): 
+            return QtCore.QSize(size.width(), height_for_width)
+        else: 
+            return QtCore.QSize(width_for_height, size.height())
 
     def draw_widget(self, painter):
         size = self._size_in_ratio()
-        box = QtCore.QRect((self.size().width() - size.width()) / 2, (self.size().height() - size.height()) / 2, size.width(), size.height())
+        box = QtCore.QRect(
+            (self.size().width() - size.width()) / 2, 
+            (self.size().height() - size.height()) / 2, 
+            size.width(), size.height())
 
         painter.translate(box.x(), box.y())
         painter.scale(float(size.width() / 360.0), float(size.height() / 180.0))
@@ -238,13 +260,19 @@ class MapWidget(QtGui.QWidget):
         painter.drawPolygon(polygon)
 
     def _draw_own_locator(self, painter):
-        self._draw_highlighted_locator(painter, self.map.own_locator, QtGui.QColor(255, 0, 0))
+        self._draw_highlighted_locator(
+            painter, self.map.own_locator, QtGui.QColor(255, 0, 0))
 
     def _draw_destination(self, painter):
-        self._draw_highlighted_locator(painter, self.map.destination_locator, QtGui.QColor(0, 0, 255))
-        self._draw_direct_line(painter, self.map.own_locator, self.map.destination_locator, QtGui.QColor(0, 0, 255))
+        self._draw_highlighted_locator(
+            painter, self.map.destination_locator, QtGui.QColor(0, 0, 255))
+        self._draw_direct_line(
+            painter, self.map.own_locator, self.map.destination_locator, 
+            QtGui.QColor(0, 0, 255))
 
-    def _draw_highlighted_locator(self, painter, locator, color = QtGui.QColor(0, 0, 0), opacity = 1):
+    def _draw_highlighted_locator(
+            self, painter, locator, color = QtGui.QColor(0, 0, 0), 
+            opacity = 1):
         if not locator: return
         r = 1.0
         w = 1.0
@@ -260,7 +288,9 @@ class MapWidget(QtGui.QWidget):
         painter.drawLine(top_left, bottom_right)
         painter.drawLine(bottom_left, top_right)
 
-    def _draw_direct_line(self, painter, source_locator, destination_locator, color = QtGui.QColor(0, 0, 0), opacity = 1):
+    def _draw_direct_line(
+            self, painter, source_locator, destination_locator, 
+            color = QtGui.QColor(0, 0, 0), opacity = 1):
         if not(source_locator and destination_locator): return
         source_latlon = source_locator.to_lat_lon()
         destination_latlon = destination_locator.to_lat_lon()
@@ -272,7 +302,9 @@ class MapWidget(QtGui.QWidget):
         painter.setPen(pen)
         painter.drawLine(p1, p2)        
 
-    def _draw_locator_field(self, painter, locator, color = QtGui.QColor(255, 0, 0), opacity = 1):
+    def _draw_locator_field(
+            self, painter, locator, color = QtGui.QColor(255, 0, 0), 
+            opacity = 1):
         if not locator: return
         latlon = locator.to_lat_lon()
         precision = len(str(locator))
@@ -291,9 +323,14 @@ class MapWidget(QtGui.QWidget):
         heatmap = self.map.locator_heatmap
         for latlon in heatmap.heatmap:
             heat = self.map.locator_heatmap.heatmap[latlon]
-            self._draw_lat_lon(painter, latlon, width = heatmap.cell_width, height = heatmap.cell_height, color = self._heat_color(heat), opacity = 0.4)
+            self._draw_lat_lon(
+                painter, latlon, width = heatmap.cell_width, 
+                height = heatmap.cell_height, color = self._heat_color(heat), 
+                opacity = 0.4)
 
-    def _draw_lat_lon(self, painter, latlon, width = 2, height = 1, color = QtGui.QColor(255, 0, 0), opacity = 1):
+    def _draw_lat_lon(
+            self, painter, latlon, width = 2, height = 1, 
+            color = QtGui.QColor(255, 0, 0), opacity = 1):
         rect = QtCore.QRectF(latlon.lon, latlon.lat, width, height)
         painter.setOpacity(opacity)
         painter.fillRect(rect, color)
@@ -320,14 +357,17 @@ class MapWindow(_windowmanager.ManagedWindow):
         self.map_widget = MapWidget(map)
 
         show_spots_received_on_selected_continents = QtGui.QRadioButton()
-        show_spots_received_on_selected_continents.setText("Empfangen in " + ", ".join(self.map.spot_filters[0].continents))
+        show_spots_received_on_selected_continents.setText(
+            "Empfangen in " + ", ".join(self.map.spot_filters[0].continents))
         show_spots_received_on_selected_continents.setChecked(True)
-        show_spots_received_on_selected_continents.clicked.connect(self.map.show_spots_received_on_selected_continents)
+        show_spots_received_on_selected_continents.clicked.connect(
+            self.map.show_spots_received_on_selected_continents)
 
         show_spots_receiving_selected_call = QtGui.QRadioButton()
         show_spots_receiving_selected_call.setText("Meine Reichweite")
         show_spots_receiving_selected_call.setChecked(False)
-        show_spots_receiving_selected_call.clicked.connect(self.map.show_spots_receiving_selected_call)
+        show_spots_receiving_selected_call.clicked.connect(
+            self.map.show_spots_receiving_selected_call)
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(show_spots_received_on_selected_continents)

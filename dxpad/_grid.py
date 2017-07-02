@@ -13,7 +13,9 @@ import sys, re, math
 
 from . import _location
 
-LOCATOR_EXPRESSION = re.compile(r'[A-R]{2}([0-9]{2}([a-x]{2})?)?', re.IGNORECASE)
+LOCATOR_EXPRESSION = re.compile(
+    r'[A-R]{2}([0-9]{2}([a-x]{2})?)?', 
+    re.IGNORECASE)
 
 class Locator:
     def __init__(self, locator):
@@ -21,7 +23,8 @@ class Locator:
 
     @staticmethod
     def is_valid_locator(locator):
-        return len(locator) >= 2 and len(locator) <= 6 and len(LOCATOR_EXPRESSION.findall(locator)) == 1
+        return (len(locator) >= 2 and len(locator) <= 6 
+            and len(LOCATOR_EXPRESSION.findall(locator)) == 1)
 
     def format_as_locator(self, locator):
         if not Locator.is_valid_locator(locator):
@@ -73,9 +76,11 @@ class Locator:
     def from_lat_lon(latlon, precision = 6):
         lon = latlon.lon + 180.0
         lat = latlon.lat + 90.0
-        field = chr(ord("A") + int(lon // 20)) + chr(ord("A") + int(lat // 10))
+        field = (chr(ord("A") + int(lon // 20)) 
+               + chr(ord("A") + int(lat // 10)))
         square = str(int((lon / 2) % 10)) + str(int(lat % 10))
-        subsquare = chr(ord("a") + int((lon - 2 * int(lon / 2)) * 12.0)) + chr(ord("a") + int((lat - int(lat)) * 24.0))
+        subsquare = (chr(ord("a") + int((lon - 2 * int(lon / 2)) * 12.0)) 
+                   + chr(ord("a") + int((lat - int(lat)) * 24.0)))
         locator = field
         if precision > 2: locator += square
         if precision > 4: locator += subsquare
@@ -91,10 +96,18 @@ def main(args):
             distance = locator.distance_to(locator2)
             bearing_to = locator.bearing_to(locator2)
             bearing_from = locator.bearing_from(locator2)
-            print(("{!s} -> {!s}: {:.0f}km".format(locator, locator2, distance)))
-            print(("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_to)))
-            print(("{!s} -> {!s}: {:.1f}°".format(locator, locator2, bearing_from)))
-            print(("{!s} == {!s}: {}".format(locator, locator2, str(locator == locator2))))
+            print(
+                "{!s} -> {!s}: {:.0f}km"
+                .format(locator, locator2, distance))
+            print(
+                "{!s} -> {!s}: {:.1f}°"
+                .format(locator, locator2, bearing_to))
+            print(
+                "{!s} -> {!s}: {:.1f}°"
+                .format(locator, locator2, bearing_from))
+            print(
+                "{!s} == {!s}: {}"
+                .format(locator, locator2, str(locator == locator2)))
     else:
         lat = float(args[1])
         lon = float(args[2])

@@ -18,12 +18,17 @@ class Spot:
         self.source_dxcc_info = None
 
     def __str__(self):
-        return "source({}, {}, {}) spot({}, {}, {}, {})".format(self.source_call, self.source_grid, self.source_dxcc_info, self.ttl, self.call, self.frequency, self.time)
+        return ("source({}, {}, {}) spot({}, {}, {}, {})"
+            .format(
+                self.source_call, self.source_grid, self.source_dxcc_info, 
+                self.ttl, self.call, self.frequency, self.time))
 
 class ClusterSpot(Spot):
     TTL = 300
-    def __init__(self, call, frequency, time, source_call, source_grid, comment):
-        Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
+    def __init__(
+            self, call, frequency, time, source_call, source_grid, comment):
+        Spot.__init__(
+            self, self.TTL, call, frequency, time, source_call, source_grid)
         self.comment = comment
 
     def __str__(self):
@@ -32,15 +37,20 @@ class ClusterSpot(Spot):
 
 class RbnSpot(Spot):
     TTL = 60
-    def __init__(self, call, frequency, time, source_call, source_grid, mode, snr, speed, rbnType):
-        Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
+    def __init__(
+            self, call, frequency, time, source_call, source_grid, mode, snr, 
+            speed, rbnType):
+        Spot.__init__(
+            self, self.TTL, call, frequency, time, source_call, source_grid)
         self.mode = mode
         self.snr = snr
         self.speed = speed
         self.rbnType = rbnType
 
     def __str__(self):
-        return Spot.__str__(self) + " rbn(mode: {}, snr: {}, speed: {}, type: {})".format(self.mode, self.snr, self.speed, self.rbnType)
+        return ("{} rbn(mode: {}, snr: {}, speed: {}, type: {})"
+            .format(Spot.__str__(self), self.mode, self.snr, self.speed, 
+                self.rbnType))
 
 class TelnetClient:
     ENCODING = "latin_1"
@@ -127,7 +137,9 @@ class ClusterSpotter:
         frequency = float(spot_match.group(3))
         timestamp = time.time()
         source_call = _callinfo.Call(spot_match.group(1))
-        source_grid = _grid.Locator(spot_match.group(8)) if spot_match.group(8) else None
+        source_grid = (_grid.Locator(spot_match.group(8))
+                       if spot_match.group(8)
+                       else None)
         comment = spot_match.group(5).strip()
 
         rbn_comment_match = self._rbn_comment_expression.match(comment)
@@ -136,9 +148,12 @@ class ClusterSpotter:
             snr = float(rbn_comment_match.group(2))
             speed = rbn_comment_match.group(3)
             rbnType = rbn_comment_match.group(5)
-            spot = RbnSpot(call, frequency, timestamp, source_call, source_grid, mode, snr, speed, rbnType)
+            spot = RbnSpot(
+                call, frequency, timestamp, source_call, source_grid, mode, 
+                snr, speed, rbnType)
         else:
-            spot = ClusterSpot(call, frequency, timestamp, source_call, source_grid, comment)
+            spot = ClusterSpot(
+                call, frequency, timestamp, source_call, source_grid, comment)
         spot_callback(spot)
 
 
@@ -175,7 +190,10 @@ class DxSpot:
         self.timeout = time.time()
 
     def __str__(self):
-        return "{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, sources: {3:>2.0f}".format(self.call, self.frequency, self.timeout - time.time(), len(self.sources))
+        return ("{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, "
+                "sources: {3:>2.0f}"
+                 .format(self.call, self.frequency, self.timeout - time.time(), 
+                     len(self.sources)))
 
 class SpotAggregator(QtCore.QObject):
     update_spots = QtCore.Signal(object)
@@ -200,22 +218,32 @@ class SpotAggregator(QtCore.QObject):
                     break
 
             if not spot:
-                spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
-                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+                spot = DxSpot(
+                    incoming_spot.call, incoming_spot.frequency, 
+                    self.dxcc.find_dxcc_info(incoming_spot.call))
+                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
+                    incoming_spot.source_call)
                 spot.sources.add(incoming_spot)
-                spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
+                spot.timeout = max(
+                    spot.timeout, incoming_spot.time + incoming_spot.ttl)
                 spots_by_call.append(spot)
             else:
-                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
+                    incoming_spot.source_call)
                 spot.sources.add(incoming_spot)
                 spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
-                spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
+                spot.timeout = max(
+                    spot.timeout, incoming_spot.time + incoming_spot.ttl)
 
         else:
-            spot = DxSpot(incoming_spot.call, incoming_spot.frequency, self.dxcc.find_dxcc_info(incoming_spot.call))
-            incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(incoming_spot.source_call)
+            spot = DxSpot(
+                incoming_spot.call, incoming_spot.frequency, 
+                self.dxcc.find_dxcc_info(incoming_spot.call))
+            incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
+                incoming_spot.source_call)
             spot.sources.add(incoming_spot)
-            spot.timeout = max(spot.timeout, incoming_spot.time + incoming_spot.ttl)
+            spot.timeout = max(
+                spot.timeout, incoming_spot.time + incoming_spot.ttl)
             spots_by_call = [spot]
 
         self.spots[incoming_spot.call] = spots_by_call
@@ -226,7 +254,8 @@ class SpotAggregator(QtCore.QObject):
         updated_spots = {}
         spots_to_emit = []
         for call in list(self.spots.keys()):
-            spots_by_call = [spot for spot in self.spots[call] if now <= spot.timeout]
+            spots_by_call = [spot for spot in self.spots[call] 
+                             if now <= spot.timeout]
             if len(spots_by_call) > 0:
                 updated_spots[call] = spots_by_call
                 spots_to_emit.extend(spots_by_call)
@@ -257,7 +286,9 @@ class SpotAggregator(QtCore.QObject):
 
 @QtCore.Slot(object)
 def print_spots(spots):
-    print("Spots at {}:".format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
+    print(
+        "Spots at {}:"
+        .format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
     print("\n".join([str(spot) for spot in spots]))
     print("")
 

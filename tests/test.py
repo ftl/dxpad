@@ -107,7 +107,9 @@ class TestLatLon(unittest.TestCase):
                     conflicts.append(lat_lon)
                 else:
                     hashes.add(lat_lon)
-        self.assertEqual(len(conflicts), 0, "{} conflicting {}".format(len(hashes), len(conflicts)))
+        self.assertEqual(
+            len(conflicts), 0, 
+            "{} conflicting {}".format(len(hashes), len(conflicts)))
 
 
 class TestNotedQsos(unittest.TestCase):
@@ -204,31 +206,45 @@ class TestCall(unittest.TestCase):
         self.assertEqual(working_condition, call.working_condition)
 
     def test_find_all(self):
-        calls = _callinfo.Call.find_all("DL3NEY W1AW 9A1AA EA6/DJ9MH VE3/DL1NEO/9 DL3NY/HA2 DF2NK/p VK7/DK6MP/9/p", lambda m: m.group())
-        self.assertItemsEqual(["DL3NEY", "W1AW", "9A1AA", "EA6/DJ9MH", "VE3/DL1NEO/9", "DL3NY/HA2", "DF2NK/p", "VK7/DK6MP/9/p"], calls)
+        calls = _callinfo.Call.find_all(
+            "DL3NEY W1AW 9A1AA EA6/DJ9MH VE3/DL1NEO/9 DL3NY/HA2 DF2NK/p "
+            "VK7/DK6MP/9/p", 
+            lambda m: m.group())
+        self.assertItemsEqual(
+            ["DL3NEY", "W1AW", "9A1AA", "EA6/DJ9MH", "VE3/DL1NEO/9", 
+             "DL3NY/HA2", "DF2NK/p", "VK7/DK6MP/9/p"], 
+            calls)
 
     def test_base_call(self):
-        self.assertCall(_callinfo.Call("DL3NEY"), None, "DL3NEY", None, None)
+        self.assertCall(
+            _callinfo.Call("DL3NEY"), None, "DL3NEY", None, None)
 
     def test_base_call_with_prefix(self):
-        self.assertCall(_callinfo.Call("EA6/DL3NEY"), "EA6", "DL3NEY", None, None)
+        self.assertCall(
+            _callinfo.Call("EA6/DL3NEY"), "EA6", "DL3NEY", None, None)
 
     def test_base_call_with_working_condition(self):
-        self.assertCall(_callinfo.Call("DL3NEY/p"), None, "DL3NEY", None, "P")
+        self.assertCall(
+            _callinfo.Call("DL3NEY/p"), None, "DL3NEY", None, "P")
 
     def test_base_call_with_suffix(self):
-        self.assertCall(_callinfo.Call("DL3NEY/KP4"), None, "DL3NEY", "KP4", None)
+        self.assertCall(
+            _callinfo.Call("DL3NEY/KP4"), None, "DL3NEY", "KP4", None)
 
     def test_base_call_with_suffix_and_working_condition(self):
-        self.assertCall(_callinfo.Call("DL3NEY/KP4/MM"), None, "DL3NEY", "KP4", "MM")
+        self.assertCall(
+            _callinfo.Call("DL3NEY/KP4/MM"), None, "DL3NEY", "KP4", "MM")
 
     def test_base_call_with_prefix_and_working_condition(self):
-        self.assertCall(_callinfo.Call("EA8/DL3NEY/MM"), "EA8", "DL3NEY", None, "MM")
+        self.assertCall(
+            _callinfo.Call("EA8/DL3NEY/MM"), "EA8", "DL3NEY", None, "MM")
 
     def test_base_call_with_prefix_and_suffix(self):
-        self.assertCall(_callinfo.Call("WB3/DL3NEY/8"), "WB3", "DL3NEY", "8", None)
+        self.assertCall(
+            _callinfo.Call("WB3/DL3NEY/8"), "WB3", "DL3NEY", "8", None)
 
     def test_base_call_with_prefix_and_suffix_and_working_condition(self):
-        self.assertCall(_callinfo.Call("WB3/DL3NEY/8/p"), "WB3", "DL3NEY", "8", "P")
+        self.assertCall(
+            _callinfo.Call("WB3/DL3NEY/8/p"), "WB3", "DL3NEY", "8", "P")
 
 if __name__ ==  '__main__': unittest.main()

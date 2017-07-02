@@ -24,7 +24,9 @@ class HamQTH:
 
     def lookup_call(self, call):
         if not self._login(): return None
-        response = self._get({"id": self.session.session_id, "callsign": str(call), "prg": "dxpad0.0"})
+        response = self._get(
+            {"id": self.session.session_id, "callsign": str(call), 
+            "prg": "dxpad0.0"})
         if not response:
             print("HamQTH: query failed")
             return None
@@ -43,7 +45,8 @@ class HamQTH:
         return self.session and self.session.session_id
 
     def _get(self, params):
-        response = requests.get("https://www.hamqth.com/xml.php", params = params)
+        response = requests.get(
+            "https://www.hamqth.com/xml.php", params = params)
         if response.status_code != 200:
             print("HamQTH: request failed")
             print(str(response.status_code))
@@ -58,9 +61,14 @@ class HamQTH:
         result.hamqth_id = info.callsign
         result.email = info.email
         result.name = info.nick
-        result.postal_address = [s for s in [info.adr_name, info.adr_street1, info.adr_street2, info.adr_street3, info.adr_city, info.adr_zip] if s != None and s.strip() != ""]
+        result.postal_address = [
+            s for s in [info.adr_name, info.adr_street1, info.adr_street2, 
+                info.adr_street3, info.adr_city, info.adr_zip] 
+            if s != None and s.strip() != ""
+        ]
         if info.latitude and info.longitude:
-            result.latlon = _location.LatLon(float(info.latitude), float(info.longitude))
+            result.latlon = _location.LatLon(
+                float(info.latitude), float(info.longitude))
         if info.grid and _grid.Locator.is_valid_locator(info.grid):
             result.locator = _grid.Locator(info.grid)
         elif result.latlon:
@@ -104,7 +112,9 @@ class AsyncHamQTH(QtCore.QThread):
 
 @QtCore.Slot(object)
 def print_call_info(call, info):
-    print(str(call) + ": " + info.fname + " " + info.name + " from " + info.country)
+    print(
+        "{}: {} {} from {}"
+        .format(str(call), info.fname, info.name, info.country))
 
 def main(args):
     if len(args) < 3: return

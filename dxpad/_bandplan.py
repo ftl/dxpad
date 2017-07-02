@@ -97,9 +97,15 @@ def main(args):
             portion = band.find_portion(frequency)
 
             if portion:
-                print("{}, {}: {:10.1f} kHz - {:10.1f} kHz".format(band.name, portion.name, portion.from_kHz, portion.to_kHz))
+                print(
+                    "{}, {}: {:10.1f} kHz - {:10.1f} kHz"
+                    .format(
+                        band.name, portion.name, 
+                        portion.from_kHz, portion.to_kHz))
             else:
-                print("{}, unknown: {:10.1f} kHz - {:10.1f} kHz".format(band.name, band.from_kHz, band.to_kHz))
+                print(
+                    "{}, unknown: {:10.1f} kHz - {:10.1f} kHz"
+                    .format(band.name, band.from_kHz, band.to_kHz))
             return
 
     print("band not found for {:10.1f} kHz".format(frequency))

@@ -26,7 +26,8 @@ from . import _config
 
 class WindowManager:
     def __init__(self, parent = None):
-        self.settings = QtCore.QSettings(_config.filename("windows.ini"), QtCore.QSettings.IniFormat)
+        self.settings = QtCore.QSettings(
+            _config.filename("windows.ini"), QtCore.QSettings.IniFormat)
         self.windows = {}
 
     def restore_window_geometry(self, window):

@@ -14,13 +14,18 @@ Column  Length  Description
 42      9       Latitude in degrees, + for North
 51      10      Longitude in degrees, + for West
 61      9       Local time offset from GMT
-70      6       Primary DXCC Prefix (A "*" preceding this prefix indicates that the country is on the DARC WAEDC list, and counts in CQ-sponsored contests, but not ARRL-sponsored contests).
+70      6       Primary DXCC Prefix (A "*" preceding this prefix 
+                indicates that the country is on the DARC WAEDC list, 
+                and counts in CQ-sponsored contests, but not ARRL-
+                sponsored contests).
 
-Following lines contain alias DXCC prefixes (including the primary one), separated by commas (,).
-Multiple lines are OK; a line to be continued should end with comma (,) though it's not required.
-A semi-colon (;) terminates the last alias prefix in the list.
+Following lines contain alias DXCC prefixes (including the primary one), 
+separated by commas (,). Multiple lines are OK; a line to be continued 
+should end with comma (,) though it's not required. A semi-colon (;) 
+terminates the last alias prefix in the list.
 
-If an alias prefix is preceded by "=", this indicates that the prefix is to be treated as a full callsign, i.e. must be an exact match.
+If an alias prefix is preceded by "=", this indicates that the prefix 
+is to be treated as a full callsign, i.e. must be an exact match.
 
 The following special characters can be applied after an alias prefix:
 (#)     Override CQ Zone
@@ -29,7 +34,8 @@ The following special characters can be applied after an alias prefix:
 {aa}    Override Continent
 ~#~     Override local time offset from GMT
 
-For detailed information about handling of prefixes and suffixes see http://www.cqwpx.com/rules.htm and http://svn.fkurz.net/dxcc/trunk/dxcc?view=markup
+For detailed information about handling of prefixes and suffixes see 
+http://www.cqwpx.com/rules.htm and http://svn.fkurz.net/dxcc/trunk/dxcc?view=markup
 """
 
 import sys, os, re, requests
@@ -37,7 +43,9 @@ import sys, os, re, requests
 from . import _location, _config
 
 class DXCCInfo:
-    def __init__(self, name, cq_zone, itu_zone, continent, latlon, time_offset, primary_prefix):
+    def __init__(
+            self, name, cq_zone, itu_zone, continent, latlon, time_offset, 
+            primary_prefix):
         self.name = name
         self.cq_zone = cq_zone
         self.itu_zone = itu_zone
@@ -59,7 +67,12 @@ class DXCCInfo:
         )
 
     def __str__(self):
-        return "dxcc({}, cq={}, itu={}, cont={}, lat/lon={!s}, offset={:3.1f}, primary={}, exact={})".format(self.name, self.cq_zone, self.itu_zone, self.continent, self.latlon, self.time_offset, self.primary_prefix, self.needs_exact_match)
+        return ("dxcc({}, cq={}, itu={}, cont={}, lat/lon={!s}, "
+                "offset={:3.1f}, primary={}, exact={})"
+            .format(
+                self.name, self.cq_zone, self.itu_zone, self.continent, 
+                self.latlon, self.time_offset, self.primary_prefix, 
+                self.needs_exact_match))
 
 class DXCC:
     def __init__(self):
@@ -76,7 +89,9 @@ class DXCC:
         latlon = _location.LatLon(lat, lon)
         time_offset = float(fields[6].strip())
         primary_prefix = fields[7].strip()
-        return DXCCInfo(name, cq_zone, itu_zone, continent, latlon, time_offset, primary_prefix)
+        return DXCCInfo(
+            name, cq_zone, itu_zone, continent, latlon, time_offset, 
+            primary_prefix)
 
     def _parse_prefixes(self, line, base_dxcc_info):
         prefixes = re.split(",|;", line)

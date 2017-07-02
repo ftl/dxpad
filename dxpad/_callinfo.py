@@ -14,15 +14,20 @@ CALL_EXPRESSION = re.compile(r'\b(([A-Z0-9]+)/)?([A-Z0-9]?[A-Z][0-9][A-Z0-9]*[A-
 
 class Call:
     def __init__(self, raw_text):
-        if not Call.is_valid_call(raw_text): raise ValueError("{} is not a valid call.".format(raw_text))
+        if not Call.is_valid_call(raw_text): 
+            raise ValueError("{} is not a valid call.".format(raw_text))
+        
         match = CALL_EXPRESSION.match(raw_text)
         if not(match):
             print("Cannot find call: " + raw_text)
         self.prefix = match.group(2).upper() if match.start(2) > -1 else None
         self.base_call = match.group(3).upper()
         self.suffix = match.group(5).upper() if match.start(5) > -1 else None
-        self.working_condition = match.group(7).upper() if match.start(7) > -1 else None
-        if self.suffix in ["P", "A", "M", "MMJO68", "AM"] and not self.working_condition:
+        self.working_condition = (match.group(7).upper() 
+                                  if match.start(7) > -1 
+                                  else None)
+        if (self.suffix in ["P", "A", "M", "MM", "AM"] 
+                and not self.working_condition):
             self.working_condition = self.suffix
             self.suffix = None
 
@@ -38,7 +43,8 @@ class Call:
         return result
 
     def __hash__(self):
-        return hash((self.prefix, self.base_call, self.suffix, self.working_condition))
+        return hash(
+            (self.prefix, self.base_call, self.suffix, self.working_condition))
 
     def __eq__(self, other):
         return hash(self) == hash(other)
@@ -84,7 +90,9 @@ class Info:
             result += "dok: " + self.dok + "\n"
         if self.dxcc_info:
             result += "country: " + self.dxcc_info.name + "\n"
-            result += "continent: " + self.dxcc_info.continent + " itu: " + str(self.dxcc_info.itu_zone) + " cq: " + str(self.dxcc_info.cq_zone) + "\n"
+            result += ("continent: " + self.dxcc_info.continent 
+                     + " itu: " + str(self.dxcc_info.itu_zone) 
+                     + " cq: " + str(self.dxcc_info.cq_zone) + "\n")
         if self.iota:
             result += "iota: " + self.iota + "\n"
         if self.latlon:

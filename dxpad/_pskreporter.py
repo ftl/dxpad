@@ -5,7 +5,7 @@
 Retrieving spots from pskreporter.info.
 
 For more information see: https://www.pskreporter.info/pskdev.html
-# retrieve.pskreporter.info/query?senderCallsign=jn&rronly=1&modify=grid&flowStartSeconds=-600
+template URL: retrieve.pskreporter.info/query?senderCallsign=jn&rronly=1&modify=grid&flowStartSeconds=-600
 """
 
 import sys, requests
@@ -16,13 +16,16 @@ from . import _spotting, _callinfo, _grid, _location, _config
 
 class PskReporterSpot(_spotting.Spot):
     TTL = 600
-    def __init__(self, call, frequency, time, source_call, source_grid, mode, snr):
-        _spotting.Spot.__init__(self, self.TTL, call, frequency, time, source_call, source_grid)
+    def __init__(
+            self, call, frequency, time, source_call, source_grid, mode, snr):
+        _spotting.Spot.__init__(
+            self, self.TTL, call, frequency, time, source_call, source_grid)
         self.mode = mode
         self.snr = snr
 
     def __str__(self):
-        return _spotting.Spot.__str__(self) + " pskreporter(mode: {}, snr: {})".format(self.mode, self.snr)
+        return ("{} pskreporter(mode: {}, snr: {})"
+                .format(_spotting.Spot.__str__(self), self.mode, self.snr))
 
 class PskReporterWorker(QtCore.QThread):
     MAX_SNR = 30.0
@@ -34,7 +37,10 @@ class PskReporterWorker(QtCore.QThread):
 
     def run(self):
         print("PskReporter: fetch spots")
-        response = requests.get("http://retrieve.pskreporter.info/query", params = {"senderCallsign": self.grid, "rronly": "1", "modify": "grid", "flowStartSeconds": "-600"})
+        response = requests.get(
+            "http://retrieve.pskreporter.info/query", 
+            params = {"senderCallsign": self.grid, "rronly": "1", 
+                "modify": "grid", "flowStartSeconds": "-600"})
         if response.status_code != 200:
             print("PskReporter: request failed")
             print(str(response.status_code))
@@ -42,10 +48,13 @@ class PskReporterWorker(QtCore.QThread):
             return
         xml_data = minidom.parseString(response.text)
         for element in xml_data.getElementsByTagName("receptionReport"):
-            if not (_callinfo.Call.is_valid_call(element.getAttribute("receiverCallsign")) 
-                and _grid.Locator.is_valid_locator(element.getAttribute("receiverLocator")) 
-                and _callinfo.Call.is_valid_call(element.getAttribute("senderCallsign")) 
-                and element.hasAttribute("frequency")): 
+            if not (_callinfo.Call.is_valid_call(
+                        element.getAttribute("receiverCallsign")) 
+                    and _grid.Locator.is_valid_locator(
+                        element.getAttribute("receiverLocator")) 
+                    and _callinfo.Call.is_valid_call(
+                        element.getAttribute("senderCallsign")) 
+                    and element.hasAttribute("frequency")): 
                 continue
             
             source_call = _callinfo.Call(element.getAttribute("receiverCallsign"))
