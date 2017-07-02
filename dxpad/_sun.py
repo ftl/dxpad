@@ -6,7 +6,9 @@ For more information about grayline see https://github.com/joergdietrich/Leaflet
 For more information about sunrise/sunset see http://michelanders.blogspot.de/2010/12/calulating-sunrise-and-sunset-in-python.html
 """
 
-import sys, math, time
+import sys
+import math
+import time
 
 def days_since_epoch(time = time.time()):
     return time / 86400.0

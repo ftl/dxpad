@@ -7,8 +7,11 @@ Lookup callbook information at hamqth.com.
 For more information about the API see https://www.hamqth.com/developers.php
 """
 
-import sys, requests, collections
+import sys
+import requests
+import collections
 import xml.dom.minidom as minidom
+
 from PySide import QtCore, QtGui
 
 from . import _callinfo, _grid, _location, _xml

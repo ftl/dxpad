@@ -8,8 +8,10 @@ For more information see: https://www.pskreporter.info/pskdev.html
 template URL: retrieve.pskreporter.info/query?senderCallsign=jn&rronly=1&modify=grid&flowStartSeconds=-600
 """
 
-import sys, requests
+import sys
+import requests
 import xml.dom.minidom as minidom
+
 from PySide import QtCore, QtGui
 
 from . import _spotting, _callinfo, _grid, _location, _config

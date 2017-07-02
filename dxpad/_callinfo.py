@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, re, time
+import sys
+import re
+import time
 
 from . import _time
 

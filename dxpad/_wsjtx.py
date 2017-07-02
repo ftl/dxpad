@@ -1,7 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, socket, struct
+import sys
+import socket
+import struct
+
 from PySide import QtCore, QtGui
 
 from . import _config, _callinfo, _grid

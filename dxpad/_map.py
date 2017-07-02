@@ -1,7 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, time, os
+import sys
+import time
+import os
+
 from PySide import QtCore, QtGui, QtSvg
 
 from . import _sun, _location, _grid, _dxcc, _bandmap, _bandplan, _spotting, \

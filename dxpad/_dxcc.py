@@ -38,7 +38,10 @@ For detailed information about handling of prefixes and suffixes see
 http://www.cqwpx.com/rules.htm and http://svn.fkurz.net/dxcc/trunk/dxcc?view=markup
 """
 
-import sys, os, re, requests
+import sys
+import os
+import re
+import requests
 
 from . import _location, _config
 

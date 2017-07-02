@@ -8,8 +8,11 @@ For more information about the API see
 https://www.qrz.com/page/current_spec.html
 """
 
-import sys, requests, collections
+import sys
+import requests
+import collections
 import xml.dom.minidom as minidom
+
 from PySide import QtCore, QtGui
 
 from . import _callinfo, _grid, _location, _xml

@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, webbrowser
+import sys
+import webbrowser
+
 from PySide import QtCore, QtGui
 
 from . import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, _config

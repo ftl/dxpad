@@ -9,7 +9,9 @@ see https://en.wikipedia.org/wiki/Maidenhead_Locator_System
 see http://ham.stackexchange.com/questions/221/how-can-one-convert-from-lat-long-to-grid-square
 """
 
-import sys, re, math
+import sys
+import re
+import math
 
 from . import _location
 

@@ -19,7 +19,10 @@ window is completely on the screen.
 What a mess...
 """
 
-import sys, os, base64
+import sys
+import os
+import base64
+
 from PySide import QtCore, QtGui
 
 from . import _config

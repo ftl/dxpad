@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
+import os
+
 from PySide import QtCore
 
 from . import _grid, _callinfo

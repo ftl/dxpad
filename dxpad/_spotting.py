@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, time, re
+import sys
+import time
+import re
 import telnetlib as tn
+
 from PySide import QtCore, QtGui
 
 from . import _dxcc, _config, _grid, _callinfo

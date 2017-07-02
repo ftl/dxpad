@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, time
+import sys
+import time
+
 from PySide import QtCore, QtGui
+
 from . import _spotting, _dxcc, _bandplan, _config, _windowmanager
 
 COLOR_SPOT = QtGui.QColor(255, 120, 120)

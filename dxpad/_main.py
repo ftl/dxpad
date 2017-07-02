@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 from PySide import QtGui
 
 from . import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, \

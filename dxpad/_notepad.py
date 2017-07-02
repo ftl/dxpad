@@ -1,7 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, time, re, collections, math
+import sys
+import time
+import re
+import collections
+import math
+
 from PySide import QtCore, QtGui
 
 from . import _callinfo, _time
