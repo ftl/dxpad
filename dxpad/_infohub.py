@@ -6,7 +6,8 @@ import webbrowser
 
 from PySide import QtCore, QtGui
 
-from . import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, _config
+from . import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, \
+              _config, _windowmanager
 
 class Infohub(QtCore.QObject):
     info_changed = QtCore.Signal(object, object)
@@ -123,7 +124,12 @@ class CallinfoWidget(QtGui.QWidget):
 
     def update_info(self, info):
         self.info = info
-        label_text = "<h1>{}</h1>".format(self.call)
+        if not self.info: 
+            self.label.setText("")    
+            return
+        self.call = info.call
+
+        label_text = "<h1>{}</h1>".format(info.call)
         label_text += self._para(info.name)
         if info.postal_address:
             label_text += self._para(
@@ -181,7 +187,6 @@ class CallinfoWidget(QtGui.QWidget):
         if info.email:
             label_text += self._para(
                 self._link("mailto:{}", info.email, info.email))
-        label_text += "<hr>"
         self.label.setText(label_text)
 
     def _div(self, content, style = "margin-top: 3px;"):
@@ -204,71 +209,40 @@ class InfohubWidget(QtGui.QWidget):
         self.infohub = infohub
         self.infohub.info_changed.connect(self.update_info)
 
-        self.info_widgets = {}
+        self.info_widget = CallinfoWidget(None, None, self.infohub.own_locator)
 
-        self.info_parent = QtGui.QVBoxLayout()
-        self.info_parent.setContentsMargins(0, 0, 0, 0)
-        self.info_parent.setSpacing(0)
-        self.info_parent.setSizeConstraint(QtGui.QLayout.SetMinAndMaxSize)
-        self.info_parent.addStretch()
+        info_parent = QtGui.QVBoxLayout()
+        info_parent.setContentsMargins(0, 0, 0, 0)
+        info_parent.setSpacing(0)
+        info_parent.setSizeConstraint(QtGui.QLayout.SetMinAndMaxSize)
+        info_parent.addWidget(self.info_widget)
+        info_parent.addStretch()
         
         frame = QtGui.QFrame()
-        frame.setLayout(self.info_parent)
-        self.scroll_area = QtGui.QScrollArea()
-        self.scroll_area.setWidget(frame)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            self._scroll_to_bottom)
+        frame.setLayout(info_parent)
+        scroll_area = QtGui.QScrollArea()
+        scroll_area.setWidget(frame)
+
         vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(self.scroll_area)
+        vbox.addWidget(scroll_area)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
         self.setLayout(vbox)
 
-    @QtCore.Slot(int, int)
-    def _scroll_to_bottom(self, min, max):
-        self.scroll_area.verticalScrollBar().setValue(max)
-
     @QtCore.Slot(object, object)
     def update_info(self, call, info):
-        if call in self.info_widgets:
-            info_widget = self.info_widgets[call]
-            info_widget.update_info(info)
-            self.info_parent.removeWidget(info_widget)
-        else:
-            self._bound_widgets()
-            info_widget = CallinfoWidget(call, info, self.infohub.own_locator)
-            self.info_widgets[call] = info_widget
-        self.info_parent.addWidget(info_widget)
+        self.info_widget.update_info(info)
 
-    def _bound_widgets(self, boundary = 10):
-        index = 0
-        while len(self.info_widgets) >= boundary:
-            widget_item = self.info_parent.itemAt(index)
-            widget = widget_item.widget()
-            if widget:
-                self.info_parent.takeAt(index)
-                del self.info_widgets[widget.call]
-                widget.deleteLater()
-            else:
-                index += 1
-
-class InfohubWindow(QtGui.QWidget):
+class InfohubWindow(_windowmanager.ManagedWindow):
     def __init__(self, infohub, parent = None):
-        QtGui.QWidget.__init__(self, parent)
+        _windowmanager.ManagedWindow.__init__(self, parent)
+        self.setObjectName("infohub")
         self.infohub = infohub
-
-        self.line = QtGui.QLineEdit(self)
-        self.line.returnPressed.connect(self.lookup_call)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(InfohubWidget(self.infohub))
-        vbox.addWidget(self.line)
         self.setLayout(vbox)
         self.setWindowTitle("Infohub")
-
-    def lookup_call(self):
-        self.infohub.lookup_call(_callinfo.Call(self.line.text()))
-        self.line.setText("")
 
 def print_lookup(o):
     print("looked up: " + str(o))
@@ -288,6 +262,8 @@ def main(args):
     infohub_win = InfohubWindow(infohub)
     infohub_win.resize(300, 400)
     infohub_win.show()
+
+    infohub.lookup_call(_callinfo.Call("dl3ny"))
 
     result = app.exec_()
     qrz.wait()
