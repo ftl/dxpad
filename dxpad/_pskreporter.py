@@ -118,9 +118,6 @@ def main(args):
 
     sys.exit(result)
 
-
-if __name__ == "__main__": main(sys.argv)
-
 """
 <receptionReport 
     receiverCallsign="SM6FMB" -> source_call

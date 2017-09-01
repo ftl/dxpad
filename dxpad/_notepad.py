@@ -557,5 +557,3 @@ def main(args):
 
     result = app.exec_()
     sys.exit(result)
-
-if __name__ == "__main__": main(sys.argv)

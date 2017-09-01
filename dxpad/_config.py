@@ -146,5 +146,3 @@ def load_config():
 def main(args):
     config = load_config()
     print(str(config))
-
-if __name__ == "__main__": main(sys.argv)

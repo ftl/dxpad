@@ -295,8 +295,8 @@ def print_spots(spots):
     print("\n".join([str(spot) for spot in spots]))
     print("")
 
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+def main(args):
+    app = QtGui.QApplication(args)
 
     wid = QtGui.QWidget()
     wid.resize(250, 150)

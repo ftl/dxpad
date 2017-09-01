@@ -419,5 +419,3 @@ def main(args):
     
     aggregator.stop_spotting()
     sys.exit(result)
-
-if __name__ == "__main__": main(sys.argv)

@@ -111,5 +111,3 @@ def main(args):
     wsjtx.stop()
 
     sys.exit(result)
-
-if __name__ == "__main__": main(sys.argv)

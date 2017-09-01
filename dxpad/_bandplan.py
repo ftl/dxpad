@@ -109,5 +109,3 @@ def main(args):
             return
 
     print("band not found for {:10.1f} kHz".format(frequency))
-
-if __name__ == "__main__": main(sys.argv)

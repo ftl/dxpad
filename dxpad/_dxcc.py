@@ -188,11 +188,9 @@ class DXCC:
 
         return None
 
-def main():
+def main(args):
     dxcc = DXCC()
     dxcc.load()
-    for arg in sys.argv[1:]:
+    for arg in args[1:]:
         dxcc_info = dxcc.find_dxcc_info(arg)
         print(("{:<10} {}".format(arg, str(dxcc_info))))
-
-if __name__ == "__main__": main()

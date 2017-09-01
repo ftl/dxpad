@@ -294,5 +294,3 @@ def main(args):
     hamqth.wait()
 
     sys.exit(result)
-
-if __name__ == "__main__": main(sys.argv)

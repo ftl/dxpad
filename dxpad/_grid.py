@@ -117,5 +117,3 @@ def main(args):
         locator = Locator.from_lat_lon(latlon)
 
     print(("{!s} = {!s}".format(locator, latlon)))
-
-if __name__ == "__main__": main(sys.argv)

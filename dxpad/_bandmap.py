@@ -289,8 +289,8 @@ def print_bandmap(bandmap):
     print("\n".join([str(spot) for spot in bandmap]))
     print("")
 
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+def main(args):
+    app = QtGui.QApplication(args)
 
     config = _config.load_config()
 

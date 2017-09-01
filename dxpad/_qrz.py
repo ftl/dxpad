@@ -122,5 +122,3 @@ def main(args):
     for call in args[3:]:
         info = qrz.lookup_call(_callinfo.Call(call))
         print(str(info))
-
-if __name__ == "__main__": main(sys.argv)
