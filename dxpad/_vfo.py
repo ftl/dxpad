@@ -42,12 +42,16 @@ class BandswitchWidget(QtGui.QWidget):
                 button.setChecked(True)
             bandId += 1
         bandLayout.addStretch(1)
+        bandLayout.setContentsMargins(3, 3, 3, 3)
+        bandLayout.setSpacing(1)
 
         bandGroup = QtGui.QGroupBox("Band")
         bandGroup.setLayout(bandLayout)
 
         rootLayout = QtGui.QHBoxLayout()
         rootLayout.addWidget(bandGroup)
+        rootLayout.setContentsMargins(0, 0, 0, 0)
+        rootLayout.setSpacing(0)
         self.setLayout(rootLayout)
 
     def _select_band(self, button):
