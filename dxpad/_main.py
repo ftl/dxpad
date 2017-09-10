@@ -6,7 +6,8 @@ import sys
 from PySide import QtGui
 
 from . import _bandmap, _dxcc, _map, _spotting, _pskreporter, _infohub, \
-              _hamqth, _qrz, _notepad, _entry, _config, _windowmanager, _wsjtx
+              _hamqth, _qrz, _notepad, _entry, _config, _windowmanager, _wsjtx, \
+              _vfo, _bandplan
 
 class MainWindow(_windowmanager.ManagedMainWindow):
     def __init__(self, app, entry_line, notepad, parent = None):
@@ -41,15 +42,19 @@ def main(args):
     config = _config.load_config()
     window_manager = _windowmanager.WindowManager()
 
+    bandplan = _bandplan.IARU_REGION_1
+    vfo = _vfo.VFO(bandplan)
     dxcc = _dxcc.DXCC()
     dxcc.load()
     aggregator = _spotting.SpotAggregator(dxcc)
     pskreporter = _pskreporter.PskReporter(config.locator)
     bandmap = _bandmap.BandMap()
     map = _map.Map()
+    map.select_band(vfo.band)
     map.set_own_locator(config.locator)
     map.select_call(config.call)
     map.select_continents([dxcc.find_dxcc_info(config.call).continent])
+    vfo.band_changed.connect(map.select_band)
     notepad = _notepad.Notepad()
     entry_line = _entry.EntryLine(notepad)
     callbooks = []
@@ -75,19 +80,22 @@ def main(args):
 
     main_window = MainWindow(app, entry_line, notepad)
     infohub_window = _infohub.InfohubWindow(infohub)
-    bandmap_window = _bandmap.BandmapWindow(bandmap)
+    bandmap_window = _bandmap.BandmapWindow(bandmap, vfo)
     map_window = _map.MapWindow(map)
+    vfo_window = _vfo.VFOWindow(vfo)
 
     window_manager.add_window(main_window)
     window_manager.add_window(infohub_window)
     window_manager.add_window(bandmap_window)
     window_manager.add_window(map_window)
+    window_manager.add_window(vfo_window)
     window_manager.restore_visibility()
 
     bandmap_window.show()
     map_window.show()
     infohub_window.show()
     main_window.show()
+    vfo_window.show()
 
     main_window.setFocus()
 

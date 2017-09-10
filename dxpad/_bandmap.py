@@ -11,6 +11,7 @@ from . import _spotting, _dxcc, _bandplan, _config, _windowmanager
 COLOR_SPOT = QtGui.QColor(255, 120, 120)
 COLOR_BACKGROUND = QtGui.QColor(200, 200, 200)
 COLOR_BAND = QtGui.QColor(150, 150, 150)
+COLOR_BAND_SELECTED = QtGui.QColor(75, 75, 75)
 COLOR_CW_PORTION = QtGui.QColor(245, 246, 206)
 COLOR_DIGI_PORTION = QtGui.QColor(169, 245, 242)
 COLOR_BEACON_PORTION = QtGui.QColor(245, 169, 169)
@@ -45,11 +46,13 @@ class BandMap(QtCore.QObject):
         ]
         return len(sources_on_continent) > 0
 
+
 class OverviewBandmap(QtGui.QWidget):   
-    def __init__(self, parent = None):
+    def __init__(self, bandplan, band, parent = None):
         QtGui.QWidget.__init__(self, parent)
         self.setMaximumHeight(40)
-        self.bandplan = _bandplan.IARU_REGION_1
+        self.bandplan = bandplan
+        self.band = band
         self.spots = []
         self.from_kHz = 1000.0
         self.to_kHz = 30000.0
@@ -70,11 +73,22 @@ class OverviewBandmap(QtGui.QWidget):
         painter.fillRect(box, COLOR_BACKGROUND)
 
         for band in self.bandplan:
+            band_selected = band == self.band
             x = int((band.from_kHz - self.from_kHz) * pixPerKHz)
             w = max(1, int((band.to_kHz - band.from_kHz) * pixPerKHz))
             painter.fillRect(x, 0, w, box.height(), COLOR_BAND)
-            painter.setPen(COLOR_BAND)
+
+            color = COLOR_BAND_SELECTED if band_selected else COLOR_BAND
+            painter.setPen(color)
             painter.drawText(x, size.height() - 1, band.name)
+            if band_selected:
+                text_width = painter.fontMetrics().width(band.name)
+                box_w = max(w, text_width) + 1
+                painter.setPen(COLOR_BAND_SELECTED)
+                painter.drawLine(x - 1, size.height() - text_height, 
+                                 x - 1, size.height())
+                painter.drawLine(x + box_w, size.height() - text_height, 
+                                 x + box_w, size.height())
 
         painter.setPen(COLOR_SPOT)
         for spot in self.spots:
@@ -86,11 +100,17 @@ class OverviewBandmap(QtGui.QWidget):
         self.spots = spots
         self.repaint()
 
+    @QtCore.Slot(object)
+    def select_band(self, band):
+        self.band = band
+        self.repaint()
+
+
 class SingleBandBandmap(QtGui.QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, band, parent = None):
         QtGui.QWidget.__init__(self, parent)
         self.setMaximumHeight(60)
-        self.band = _bandplan.IARU_REGION_1[5]
+        self.band = band
         self.from_kHz = self.band.from_kHz
         self.to_kHz = self.band.to_kHz
         self.spots = []
@@ -125,13 +145,20 @@ class SingleBandBandmap(QtGui.QWidget):
         self.spots = spots
         self.repaint()
 
+    @QtCore.Slot(object)
+    def select_band(self, band):
+        self.band = band
+        self.from_kHz = self.band.from_kHz
+        self.to_kHz = self.band.to_kHz
+        self.repaint()
+
 
 class DetailedBandmap(QtGui.QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, band, parent = None):
         QtGui.QWidget.__init__(self, parent)
         self.spots = []
-        self.from_kHz = 14000.0
-        self.to_kHz = 14100.0
+        self.from_kHz = band.from_kHz
+        self.to_kHz = band.from_kHz + 100.0
 
     def paintEvent(self, event):
         painter = QtGui.QPainter()
@@ -159,6 +186,13 @@ class DetailedBandmap(QtGui.QWidget):
           if spot.frequency >= self.from_kHz and spot.frequency <= self.to_kHz
         ]
         self.repaint()
+
+    @QtCore.Slot(object)
+    def select_band(self, band):
+        self.from_kHz = band.from_kHz
+        self.to_kHz = band.from_kHz + 100.0
+        self.repaint()
+
 
 class BandmapPainter:
     def __init__(self, painter, widget):
@@ -257,17 +291,18 @@ class BandmapPainter:
 
 
 class BandmapWindow(_windowmanager.ManagedWindow):
-    def __init__(self, bandmap, parent = None):
+    def __init__(self, bandmap, vfo, parent = None):
         _windowmanager.ManagedWindow.__init__(self, parent)
-        self.bandmap = bandmap  
+        self.bandmap = bandmap
+        self.vfo = vfo
 
         self.setObjectName("bandmap")
         self.setWindowTitle("Bandmap")
         self.resize(1000, 300)
 
-        overview = OverviewBandmap(self)
-        single_band = SingleBandBandmap(self)
-        detail = DetailedBandmap(self)
+        overview = OverviewBandmap(self.vfo.bandplan, self.vfo.band, self)
+        single_band = SingleBandBandmap(self.vfo.band, self)
+        detail = DetailedBandmap(self.vfo.band, self)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(detail)
@@ -280,6 +315,9 @@ class BandmapWindow(_windowmanager.ManagedWindow):
         self.bandmap.update_spots.connect(single_band.update_spots)
         self.bandmap.update_spots.connect(detail.update_spots)
 
+        self.vfo.band_changed.connect(overview.select_band)
+        self.vfo.band_changed.connect(single_band.select_band)
+        self.vfo.band_changed.connect(detail.select_band)
 
 @QtCore.Slot(object)
 def print_bandmap(bandmap):

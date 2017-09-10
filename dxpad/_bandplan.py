@@ -87,6 +87,8 @@ IARU_REGION_1 = [
         ])
 ]
 
+NO_BAND = Band("NO", 0, 0, [])
+
 def main(args):
     if len(args) != 2: return
 

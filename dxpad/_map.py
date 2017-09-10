@@ -119,7 +119,7 @@ class Map(QtCore.QObject):
         self.locator_heatmap = LocatorHeatmap(
             cell_width = self.spot_cell_width, 
             cell_height = self.spot_cell_height)
-        self.band = _bandplan.IARU_REGION_1[5]
+        self.band = _bandplan.NO_BAND
         self.spot_filters = [SpotterContinentFilter(), ReceivingCallFilter()]
         self.spot_filter = self.spot_filters[0]
 
@@ -166,6 +166,11 @@ class Map(QtCore.QObject):
     @QtCore.Slot(object)
     def select_call(self, call):
         self.spot_filters[1].call = call
+        self.changed.emit()
+
+    @QtCore.Slot(object)
+    def select_band(self, band):
+        self.band = band
         self.changed.emit()
 
     @QtCore.Slot()
