@@ -57,6 +57,7 @@ class RbnSpot(Spot):
 
 class TelnetClient:
     ENCODING = "latin_1"
+    TIMEOUT_SECONDS = 20
     def __init__(self, hostname, port, call, password = ""):
         self.hostname = hostname
         self.port = port
@@ -65,7 +66,7 @@ class TelnetClient:
         self.running = False
 
     def run(self, line_callback):
-        telnet = tn.Telnet(self.hostname, self.port)
+        telnet = tn.Telnet(self.hostname, self.port, self.TIMEOUT_SECONDS)
         print("Connected to {}:{}".format(self.hostname, self.port))
         self.running = True
 
