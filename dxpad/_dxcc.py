@@ -163,8 +163,8 @@ class DXCC:
     def download_cty_file():
         cty = requests.get("http://www.country-files.com/cty/cty.dat")
         filename = _config.filename("cty.dat")
-        with open(filename, "w") as f:
-            f.write(cty.text)
+        with open(filename, "wb") as f:
+            f.write(cty.content)
 
     def load(self):
         filename = _config.filename("cty.dat")
