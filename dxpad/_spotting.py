@@ -10,6 +10,7 @@ from PySide import QtCore, QtGui
 
 from . import _dxcc, _config, _grid, _callinfo
 
+
 class Spot:
     def __init__(self, ttl, call, frequency, time, source_call, source_grid):
         self.ttl = ttl
@@ -57,7 +58,6 @@ class RbnSpot(Spot):
 
 class TelnetClient:
     ENCODING = "latin_1"
-    TIMEOUT_SECONDS = 20
     def __init__(self, hostname, port, call, password = ""):
         self.hostname = hostname
         self.port = port
@@ -66,7 +66,12 @@ class TelnetClient:
         self.running = False
 
     def run(self, line_callback):
-        telnet = tn.Telnet(self.hostname, self.port, self.TIMEOUT_SECONDS)
+        try:
+            self.telnet = tn.Telnet(self.hostname, self.port)
+        except:
+            print("Cannot connect to {}:{}".format(self.hostname, self.port))
+            self.running = False
+            return
         print("Connected to {}:{}".format(self.hostname, self.port))
         self.running = True
 
@@ -194,10 +199,7 @@ class DxSpot:
         self.timeout = time.time()
 
     def __str__(self):
-        return ("{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, "
-                "sources: {3:>2.0f}"
-                 .format(self.call, self.frequency, self.timeout - time.time(), 
-                     len(self.sources)))
+        return "{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, sources: {3:>2.0f}".format(str(self.call), self.frequency, self.timeout - time.time(), len(self.sources))
 
 class SpotAggregator(QtCore.QObject):
     update_spots = QtCore.Signal(object)
@@ -295,6 +297,8 @@ def print_spots(spots):
         .format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
     print("\n".join([str(spot) for spot in spots]))
     print("")
+    sys.stdout.flush()
+    sys.stderr.flush()
 
 def main(args):
     app = QtGui.QApplication(args)
@@ -317,11 +321,12 @@ def main(args):
     st.start()
 
     result = app.exec_()
-    
+
     st.stop()
     st.wait()
 
     sys.exit(result)
+
 
 # arcluster.reversebeacon.net: (RBN)
 # DX de EA5WU-#:   14049.6  G4LEM          CW    14 dB  18 WPM  CQ      0916Z
