@@ -67,7 +67,7 @@ class TelnetClient:
 
     def run(self, line_callback):
         try:
-            self.telnet = tn.Telnet(self.hostname, self.port)
+            telnet = tn.Telnet(self.hostname, self.port)
         except:
             print("Cannot connect to {}:{}".format(self.hostname, self.port))
             self.running = False
