@@ -34,9 +34,11 @@ class TestAggregation(unittest.TestCase):
         self.assertEqual(len(spot.sources), 2)
 
         for source in spot.sources:
-            self.assertEqual(source.source_dxcc_info, "TestDXCCInfo")
+            self.assertEqual(source.source_dxcc_info, "FakeDXCCInfo")
         self.assertEqual(spot.frequency, 14070000)
         self.assertEqual(spot.timeout, now + 60)
+        self.assertEqual(spot.first_seen, now - 1)
+        self.assertEqual(spot.last_seen, now)
 
     def test_spotReceived_callExists_differentFrequency_shouldAddSpot(self):
         now = time.time()
@@ -54,16 +56,20 @@ class TestAggregation(unittest.TestCase):
         spot1 = aggregator.spots[spot_call][0]
         self.assertEqual(len(spot1.sources), 1)
         for source in spot1.sources:
-            self.assertEqual(source.source_dxcc_info, "TestDXCCInfo")
+            self.assertEqual(source.source_dxcc_info, "FakeDXCCInfo")
         self.assertEqual(spot1.frequency, 14070000)
         self.assertEqual(spot1.timeout, now - 1 + 60)
+        self.assertEqual(spot1.first_seen, now - 1)
+        self.assertEqual(spot1.last_seen, now - 1)
 
         spot2 = aggregator.spots[spot_call][1]
         self.assertEqual(len(spot2.sources), 1)
         for source in spot2.sources:
-            self.assertEqual(source.source_dxcc_info, "TestDXCCInfo")
+            self.assertEqual(source.source_dxcc_info, "FakeDXCCInfo")
         self.assertEqual(spot2.frequency, 7040000)
         self.assertEqual(spot2.timeout, now + 60)
+        self.assertEqual(spot2.first_seen, now)
+        self.assertEqual(spot2.last_seen, now)
 
     def test_spotReceived_newCall_shouldAddSpot(self):
         now = time.time()
@@ -83,16 +89,20 @@ class TestAggregation(unittest.TestCase):
         spot1 = aggregator.spots[spot_call1][0]
         self.assertEqual(len(spot1.sources), 1)
         for source in spot1.sources:
-            self.assertEqual(source.source_dxcc_info, "TestDXCCInfo")
+            self.assertEqual(source.source_dxcc_info, "FakeDXCCInfo")
         self.assertEqual(spot1.frequency, 14070000)
         self.assertEqual(spot1.timeout, now - 1 + 60)
+        self.assertEqual(spot1.first_seen, now - 1)
+        self.assertEqual(spot1.last_seen, now - 1)
 
         spot2 = aggregator.spots[spot_call2][0]
         self.assertEqual(len(spot2.sources), 1)
         for source in spot2.sources:
-            self.assertEqual(source.source_dxcc_info, "TestDXCCInfo")
+            self.assertEqual(source.source_dxcc_info, "FakeDXCCInfo")
         self.assertEqual(spot2.frequency, 7040000)
         self.assertEqual(spot2.timeout, now + 60)
+        self.assertEqual(spot2.first_seen, now)
+        self.assertEqual(spot2.last_seen, now)
 
 
 class FakeDXCC(_dxcc.DXCC):
@@ -100,6 +110,6 @@ class FakeDXCC(_dxcc.DXCC):
         _dxcc.DXCC.__init__(self)
 
     def find_dxcc_info(self, call):
-        return "TestDXCCInfo"
+        return "FakeDXCCInfo"
 
 if __name__ == '__main__': unittest.main()

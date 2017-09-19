@@ -27,6 +27,7 @@ class Spot:
                 self.source_call, self.source_grid, self.source_dxcc_info, 
                 self.ttl, self.call, self.frequency, self.time))
 
+
 class ClusterSpot(Spot):
     TTL = 300
     def __init__(
@@ -95,6 +96,7 @@ class TelnetClient:
     def stop(self):
         self.running = False
 
+
 class TextfileClient:
     def __init__(self, filename):
         self.filename = filename
@@ -111,6 +113,7 @@ class TextfileClient:
 
     def stop(self):
         self.running = False
+
 
 class ClusterSpotter:
     _spot_expression = re.compile(r'DX de ([A-Z0-9/]+)(-.+?)?:?\s*([0-9]+\.[0-9]+)\s+([A-Z0-9/]+)\s+(.+?)\s([0-9]{4})Z(\s+([A-Z]{2}[0-9]{2}))?')
@@ -190,6 +193,7 @@ class SpottingThread(QtCore.QThread):
     def stop(self):
         self.spotter.stop()
 
+
 class DxSpot:
     def __init__(self, call, frequency, dxcc_info):
         self.call = call
@@ -197,9 +201,20 @@ class DxSpot:
         self.dxcc_info = dxcc_info
         self.sources = set([])
         self.timeout = time.time()
+        self.first_seen = time.time()
+        self.last_seen = 0
 
     def __str__(self):
         return "{0:<10} on {1:>8.1f} kHz, timeout in {2:3.0f}, sources: {3:>2.0f}".format(str(self.call), self.frequency, self.timeout - time.time(), len(self.sources))
+
+    def add_source(self, source_spot):
+        self.sources.add(source_spot)
+        if self.frequency != source_spot.frequency:
+            self.frequency = (self.frequency + source_spot.frequency) // 2
+        self.timeout = max(self.timeout, source_spot.time + source_spot.ttl)
+        self.first_seen = min(self.first_seen, source_spot.time)
+        self.last_seen = max(self.last_seen, source_spot.time)
+
 
 class SpotAggregator(QtCore.QObject):
     update_spots = QtCore.Signal(object)
@@ -212,6 +227,9 @@ class SpotAggregator(QtCore.QObject):
 
     @QtCore.Slot(object)
     def spot_received(self, incoming_spot):
+        incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
+            incoming_spot.source_call)
+
         if incoming_spot.call in self.spots:
             spots_by_call = self.spots[incoming_spot.call]
             spot = None
@@ -224,29 +242,14 @@ class SpotAggregator(QtCore.QObject):
                 spot = DxSpot(
                     incoming_spot.call, incoming_spot.frequency, 
                     self.dxcc.find_dxcc_info(incoming_spot.call))
-                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
-                    incoming_spot.source_call)
-                spot.sources.add(incoming_spot)
-                spot.timeout = max(
-                    spot.timeout, incoming_spot.time + incoming_spot.ttl)
                 spots_by_call.append(spot)
-            else:
-                incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
-                    incoming_spot.source_call)
-                spot.sources.add(incoming_spot)
-                spot.frequency = (spot.frequency + incoming_spot.frequency) // 2
-                spot.timeout = max(
-                    spot.timeout, incoming_spot.time + incoming_spot.ttl)
+            spot.add_source(incoming_spot)
 
         else:
             spot = DxSpot(
                 incoming_spot.call, incoming_spot.frequency, 
                 self.dxcc.find_dxcc_info(incoming_spot.call))
-            incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
-                incoming_spot.source_call)
-            spot.sources.add(incoming_spot)
-            spot.timeout = max(
-                spot.timeout, incoming_spot.time + incoming_spot.ttl)
+            spot.add_source(incoming_spot)
             spots_by_call = [spot]
 
         self.spots[incoming_spot.call] = spots_by_call
@@ -287,6 +290,7 @@ class SpotAggregator(QtCore.QObject):
             st.wait()
         self.spotting_threads = []
 
+
 @QtCore.Slot(object)
 def print_spots(spots):
     print(
@@ -296,6 +300,7 @@ def print_spots(spots):
     print("")
     sys.stdout.flush()
     sys.stderr.flush()
+
 
 def main(args):
     app = QtGui.QApplication(args)
