@@ -74,7 +74,7 @@ class NotedQsos:
 
     def _bisect_qsos(self, line, start, end, found, not_found):
         if start >= end: return not_found(start)
-        pivot = (start + end) / 2
+        pivot = (start + end) // 2
         qso = self.qsos[pivot]
         if line in qso: 
             return found(pivot, qso)

@@ -212,7 +212,7 @@ class TestCall(unittest.TestCase):
             "DL3NEY W1AW 9A1AA EA6/DJ9MH VE3/DL1NEO/9 DL3NY/HA2 DF2NK/p "
             "VK7/DK6MP/9/p", 
             lambda m: m.group())
-        self.assertItemsEqual(
+        self.assertCountEqual(
             ["DL3NEY", "W1AW", "9A1AA", "EA6/DJ9MH", "VE3/DL1NEO/9", 
              "DL3NY/HA2", "DF2NK/p", "VK7/DK6MP/9/p"], 
             calls)
