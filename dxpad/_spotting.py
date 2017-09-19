@@ -208,9 +208,6 @@ class SpotAggregator(QtCore.QObject):
         QtCore.QObject.__init__(self, parent)
         self.dxcc = dxcc
         self.spots = {}
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.tick)
-        self.timer.start(1000)
         self.spotting_threads = []
 
     @QtCore.Slot(object)
@@ -237,7 +234,7 @@ class SpotAggregator(QtCore.QObject):
                 incoming_spot.source_dxcc_info = self.dxcc.find_dxcc_info(
                     incoming_spot.source_call)
                 spot.sources.add(incoming_spot)
-                spot.frequency = (spot.frequency + incoming_spot.frequency) / 2
+                spot.frequency = (spot.frequency + incoming_spot.frequency) // 2
                 spot.timeout = max(
                     spot.timeout, incoming_spot.time + incoming_spot.ttl)
 
@@ -255,7 +252,7 @@ class SpotAggregator(QtCore.QObject):
         self.spots[incoming_spot.call] = spots_by_call
 
     @QtCore.Slot()
-    def tick(self):
+    def cleanup_spots(self):
         now = time.time()
         updated_spots = {}
         spots_to_emit = []
