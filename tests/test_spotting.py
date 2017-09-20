@@ -12,10 +12,6 @@ import dxpad._dxcc as _dxcc
 import dxpad._callinfo as _callinfo
 import dxpad._grid as _grid
 
-class TestLevenshteinCleanup(unittest.TestCase):
-    def test_blah(self):
-        pass
-
 
 class TestAggregation(unittest.TestCase):
     def test_spotReceived_callExists_sameFrequency_shouldAddSource(self):
@@ -103,6 +99,20 @@ class TestAggregation(unittest.TestCase):
         self.assertEqual(spot2.timeout, now + 60)
         self.assertEqual(spot2.first_seen, now)
         self.assertEqual(spot2.last_seen, now)
+
+
+class TestTimeoutCleanup(unittest.TestCase):
+    def test_updateSpots_shouldRemoveTimedoutSpots(self):
+        now = time.time()
+        spot_call = _callinfo.Call("AA1BB")
+        aggregator = _spotting.SpotAggregator(FakeDXCC())
+        incoming_spot = _spotting.Spot(60, spot_call, 14070000, now - 61,
+            _callinfo.Call("CT1XY"), _grid.Locator("JN12aa"))
+        aggregator.spot_received(incoming_spot)
+        self.assertEqual(len(aggregator.spots), 1)
+
+        aggregator.cleanup_spots()
+        self.assertEqual(len(aggregator.spots), 0)
 
 
 class FakeDXCC(_dxcc.DXCC):

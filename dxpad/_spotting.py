@@ -200,7 +200,7 @@ class DxSpot:
         self.frequency = frequency
         self.dxcc_info = dxcc_info
         self.sources = set([])
-        self.timeout = time.time()
+        self.timeout = 0
         self.first_seen = time.time()
         self.last_seen = 0
 
