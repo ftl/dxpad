@@ -5,6 +5,7 @@ import sys
 import time
 import re
 import telnetlib as tn
+import Levenshtein as ls
 
 from PySide import QtCore, QtGui
 
@@ -68,7 +69,7 @@ class TelnetClient:
 
     def run(self, line_callback):
         try:
-            self.telnet = tn.Telnet(self.hostname, self.port)
+            telnet = tn.Telnet(self.hostname, self.port)
         except:
             print("Cannot connect to {}:{}".format(self.hostname, self.port))
             self.running = False
@@ -215,6 +216,12 @@ class DxSpot:
         self.first_seen = min(self.first_seen, source_spot.time)
         self.last_seen = max(self.last_seen, source_spot.time)
 
+    def merge(self, spot):
+        self.sources.update(spot.sources)
+        self.timeout = max(self.timeout, spot.timeout)
+        self.first_seen = min(self.first_seen, spot.first_seen)
+        self.last_seen = max(self.last_seen, spot.last_seen)
+
 
 class SpotAggregator(QtCore.QObject):
     update_spots = QtCore.Signal(object)
@@ -257,19 +264,77 @@ class SpotAggregator(QtCore.QObject):
     @QtCore.Slot()
     def cleanup_spots(self):
         now = time.time()
-        updated_spots = {}
-        spots_to_emit = []
-        for call in list(self.spots.keys()):
-            spots_by_call = [spot for spot in self.spots[call] 
-                             if now <= spot.timeout]
-            if len(spots_by_call) > 0:
-                updated_spots[call] = spots_by_call
-                spots_to_emit.extend(spots_by_call)
+        active_spots = [spot for spots_by_call in list(self.spots.values()) 
+            for spot in spots_by_call
+            if now <= spot.timeout]
 
-        self.spots = updated_spots
-        spots_to_emit = sorted(spots_to_emit, key= lambda spot: spot.frequency)
+        spots_to_emit = sorted(active_spots, key= lambda spot: spot.frequency)
+        spots_to_emit = self._merge_spots_with_one_difference_in_call(spots_to_emit)
 
+        self.spots = self._group_spots_by_call(spots_to_emit)
         self.update_spots.emit(spots_to_emit)
+
+    def _merge_spots_with_one_difference_in_call(self, spots):
+        merged_spots = spots
+        i = 0
+        while i < len(merged_spots):
+            spot = merged_spots[i]
+            spots_on_frequency = self._spots_on_frequency(merged_spots, i)
+            merge_candidates = self._find_merge_candidates(merged_spots, 
+                spot, spots_on_frequency)
+
+            if len(merge_candidates) <= 1:
+                i += 1
+                continue
+
+            print("merge_candidates {}".format(merge_candidates))
+            merge_target = merged_spots[merge_candidates[0]]
+            for j in sorted(merge_candidates[1:]):
+                print("merging {} into {}".format(j, merge_candidates[0]))
+                merge_target.merge(merged_spots[j])
+                merged_spots = merged_spots[:j] + merged_spots[j + 1:]
+                print("merged_spots {}".format(merged_spots))
+
+            if merge_candidates[0] != i:
+                i += 1
+
+        return merged_spots
+
+    def _find_merge_candidates(self, spots, spot, spots_on_frequency):
+        return [n[0] for n in 
+            sorted(
+                [(neighbour_index, spots[neighbour_index])
+                    for neighbour_index in spots_on_frequency
+                    if ls.distance(spot.call.base_call, 
+                        spots[neighbour_index].call.base_call) <= 1],
+                key= lambda n: len(n[1].sources),
+                reverse= True)]
+
+
+    def _spots_on_frequency(self, spots, index):
+        spot = spots[index]
+        frequency = spot.frequency
+        upper_bound = index
+        while (upper_bound < len(spots)) and abs(frequency - spot.frequency) <= 2:
+            upper_bound += 1
+            if upper_bound < len(spots):
+                frequency = spots[upper_bound].frequency
+        lower_bound = index
+        while (lower_bound >= 0) and abs(frequency - spot.frequency) <= 2:
+            lower_bound -= 1
+            if lower_bound >= 0:
+                frequency = spots[lower_bound].frequency
+        return range(lower_bound + 1, upper_bound)
+
+
+    def _group_spots_by_call(self, spots):
+        grouped_spots = {}
+        for spot in spots:
+            if not spot.call in grouped_spots:
+                grouped_spots[spot.call] = [spot]
+            else:
+                grouped_spots[spot.call].append(spot) 
+        return grouped_spots
 
     def start_spotting(self, clusters, spotting_file = None):
         for c in clusters:
@@ -317,6 +382,10 @@ def main(args):
 
     aggregator = SpotAggregator(dxcc)
     aggregator.update_spots.connect(print_spots)
+
+    spot_cleanup_timer = QtCore.QTimer()
+    spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
+    spot_cleanup_timer.start(1000)
 
     st = SpottingThread.textfile("../rbn.txt")
     st.spot_received.connect(aggregator.spot_received)

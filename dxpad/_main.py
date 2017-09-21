@@ -47,7 +47,7 @@ def main(args):
     dxcc = _dxcc.DXCC()
     dxcc.load()
     aggregator = _spotting.SpotAggregator(dxcc)
-    spotCleanupTimer = QtCore.QTimer()
+    spot_cleanup_timer = QtCore.QTimer()
     pskreporter = _pskreporter.PskReporter(config.locator)
     bandmap = _bandmap.BandMap()
     map = _map.Map()
@@ -76,11 +76,11 @@ def main(args):
     aggregator.update_spots.connect(bandmap.spots_received)
     aggregator.update_spots.connect(map.highlight_spots)
     pskreporter.spot_received.connect(aggregator.spot_received)
-    spotCleanupTimer.timeout.connect(aggregator.cleanup_spots)
+    spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
     notepad.call_added.connect(infohub.lookup_call)
     wsjtx.status.dx_call_updated.connect(infohub.lookup_call)
 
-    spotCleanupTimer.start(1000)
+    spot_cleanup_timer.start(1000)
 
     main_window = MainWindow(app, entry_line, notepad)
     infohub_window = _infohub.InfohubWindow(infohub)
