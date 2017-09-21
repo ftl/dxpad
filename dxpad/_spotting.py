@@ -11,6 +11,7 @@ from PySide import QtCore, QtGui
 
 from . import _dxcc, _config, _grid, _callinfo
 
+FREQUENCY_WINDOW = 10000
 
 class Spot:
     def __init__(self, ttl, call, frequency, time, source_call, source_grid):
@@ -241,7 +242,8 @@ class SpotAggregator(QtCore.QObject):
             spots_by_call = self.spots[incoming_spot.call]
             spot = None
             for s in spots_by_call:
-                if abs(s.frequency - incoming_spot.frequency) <= 2:
+                if abs(s.frequency - incoming_spot.frequency) \
+                    <= FREQUENCY_WINDOW:
                     spot = s
                     break
 
@@ -269,12 +271,12 @@ class SpotAggregator(QtCore.QObject):
             if now <= spot.timeout]
 
         spots_to_emit = sorted(active_spots, key= lambda spot: spot.frequency)
-        spots_to_emit = self._merge_spots_with_one_difference_in_call(spots_to_emit)
+        spots_to_emit = self._merge_spots_with_similar_call(spots_to_emit)
 
         self.spots = self._group_spots_by_call(spots_to_emit)
         self.update_spots.emit(spots_to_emit)
 
-    def _merge_spots_with_one_difference_in_call(self, spots):
+    def _merge_spots_with_similar_call(self, spots):
         merged_spots = spots
         i = 0
         while i < len(merged_spots):
@@ -287,13 +289,10 @@ class SpotAggregator(QtCore.QObject):
                 i += 1
                 continue
 
-            print("merge_candidates {}".format(merge_candidates))
             merge_target = merged_spots[merge_candidates[0]]
             for j in sorted(merge_candidates[1:]):
-                print("merging {} into {}".format(j, merge_candidates[0]))
                 merge_target.merge(merged_spots[j])
                 merged_spots = merged_spots[:j] + merged_spots[j + 1:]
-                print("merged_spots {}".format(merged_spots))
 
             if merge_candidates[0] != i:
                 i += 1
@@ -315,12 +314,14 @@ class SpotAggregator(QtCore.QObject):
         spot = spots[index]
         frequency = spot.frequency
         upper_bound = index
-        while (upper_bound < len(spots)) and abs(frequency - spot.frequency) <= 2:
+        while (upper_bound < len(spots)) \
+                and abs(frequency - spot.frequency) <= FREQUENCY_WINDOW:
             upper_bound += 1
             if upper_bound < len(spots):
                 frequency = spots[upper_bound].frequency
         lower_bound = index
-        while (lower_bound >= 0) and abs(frequency - spot.frequency) <= 2:
+        while (lower_bound >= 0) \
+                and abs(frequency - spot.frequency) <= FREQUENCY_WINDOW:
             lower_bound -= 1
             if lower_bound >= 0:
                 frequency = spots[lower_bound].frequency
