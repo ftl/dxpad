@@ -11,8 +11,8 @@ from . import _dxcc, _grid, _location, _qrz, _hamqth, _callinfo, _time, \
 
 class Infohub(QtCore.QObject):
     info_changed = QtCore.Signal(object, object)
+    locator_changed = QtCore.Signal(object)
     call_looked_up = QtCore.Signal(object)
-    locator_looked_up = QtCore.Signal(object)
 
     def __init__(
             self, dxcc, callbooks = [], own_call = _config.DEFAULT_CALL, 
@@ -79,15 +79,25 @@ class Infohub(QtCore.QObject):
             else:
                 existing_info.qsl_service = info.qsl_service
         existing_info.touch()
-        self._emit_lookup(call, existing_info)
+        self.info_changed.emit(call, existing_info)
+        self._emit_locator_changed(existing_info)
 
-    def _emit_lookup(self, call, info):
-        self.info_changed.emit(call, info)
-        self.call_looked_up.emit(call)
+    def _emit_locator_changed(self, info):
         if info.locator:
-            self.locator_looked_up.emit(info.locator)
+            self.locator_changed.emit(info.locator)
         elif info.latlon:
-            self.locator_looked_up.emit(_grid.Locator.from_lat_lon(info.latlon))        
+            self.locator_changed.emit(_grid.Locator.from_lat_lon(info.latlon))
+
+    @QtCore.Slot(object)
+    def calls_seen(self, spots):
+        for spot in spots:
+            if spot.call in self:
+                existing_info = self[spot.call]
+                existing_info.last_seen = spot.last_seen
+                existing_info.last_seen_frequency = spot.frequency
+                existing_info.spot_sources = len(spot.sources)
+                existing_info.touch()
+                self.info_changed.emit(spot.call, existing_info)
 
     @QtCore.Slot(object)
     def lookup_call(self, call):
@@ -108,6 +118,11 @@ class Infohub(QtCore.QObject):
         self._emit_lookup(call, info)
         for callbook in self.callbooks:
             callbook.lookup_call(call)
+
+    def _emit_lookup(self, call, info):
+        self.call_looked_up.emit(call)
+        self.info_changed.emit(call, info)
+        self._emit_locator_changed(info)
 
 class CallinfoWidget(QtGui.QWidget):
     def __init__(self, call, info, own_locator, parent = None):
@@ -187,6 +202,12 @@ class CallinfoWidget(QtGui.QWidget):
         if info.email:
             label_text += self._para(
                 self._link("mailto:{}", info.email, info.email))
+        if info.last_seen:
+            label_text += self._div(
+                self._para("zuletzt um {0} auf {1:>8.1f} kHz ({2})"
+                    .format(_time.z(info.last_seen),
+                            info.last_seen_frequency,
+                            info.spot_sources)))
         self.label.setText(label_text)
 
     def _div(self, content, style = "margin-top: 3px;"):
@@ -207,6 +228,7 @@ class InfohubWidget(QtGui.QWidget):
     def __init__(self, infohub, parent = None):
         QtGui.QWidget.__init__(self, parent)
         self.infohub = infohub
+        self.infohub.call_looked_up.connect(self.show_info)
         self.infohub.info_changed.connect(self.update_info)
 
         self.info_widget = CallinfoWidget(None, None, self.infohub.own_locator)
@@ -229,9 +251,14 @@ class InfohubWidget(QtGui.QWidget):
         vbox.setSpacing(0)
         self.setLayout(vbox)
 
+    @QtCore.Slot(object)
+    def show_info(self, call):
+        self.info_widget.update_info(self.infohub[call])
+
     @QtCore.Slot(object, object)
     def update_info(self, call, info):
-        self.info_widget.update_info(info)
+        if call == self.info_widget.call:
+            self.info_widget.update_info(info)
 
 class InfohubWindow(_windowmanager.ManagedWindow):
     def __init__(self, infohub, parent = None):
@@ -257,7 +284,7 @@ def main(args):
     qrz = _qrz.AsyncQrz(config.qrz.user, config.qrz.password)
     infohub = Infohub(dxcc, [hamqth, qrz], config.call, config.locator)
     infohub.call_looked_up.connect(print_lookup)
-    infohub.locator_looked_up.connect(print_lookup)
+    infohub.locator_changed.connect(print_lookup)
 
     infohub_win = InfohubWindow(infohub)
     infohub_win.resize(300, 400)

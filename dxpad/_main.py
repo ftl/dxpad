@@ -72,9 +72,10 @@ def main(args):
         wsjtx_config.repeater_port)
 
 
-    infohub.locator_looked_up.connect(map.set_destination_locator)
+    infohub.locator_changed.connect(map.set_destination_locator)
     aggregator.update_spots.connect(bandmap.spots_received)
     aggregator.update_spots.connect(map.highlight_spots)
+    aggregator.update_spots.connect(infohub.calls_seen)
     pskreporter.spot_received.connect(aggregator.spot_received)
     spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
     notepad.call_added.connect(infohub.lookup_call)

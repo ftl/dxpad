@@ -9,9 +9,9 @@ import Levenshtein as ls
 
 from PySide import QtCore, QtGui
 
-from . import _dxcc, _config, _grid, _callinfo
+from . import _dxcc, _config, _grid, _callinfo, _time
 
-FREQUENCY_WINDOW = 10000
+FREQUENCY_WINDOW = 10.0 #kHz
 
 class Spot:
     def __init__(self, ttl, call, frequency, time, source_call, source_grid):
@@ -212,7 +212,7 @@ class DxSpot:
     def add_source(self, source_spot):
         self.sources.add(source_spot)
         if self.frequency != source_spot.frequency:
-            self.frequency = (self.frequency + source_spot.frequency) // 2
+            self.frequency = (self.frequency + source_spot.frequency) / 2
         self.timeout = max(self.timeout, source_spot.time + source_spot.ttl)
         self.first_seen = min(self.first_seen, source_spot.time)
         self.last_seen = max(self.last_seen, source_spot.time)
@@ -358,9 +358,7 @@ class SpotAggregator(QtCore.QObject):
 
 @QtCore.Slot(object)
 def print_spots(spots):
-    print(
-        "Spots at {}:"
-        .format(time.strftime("%H:%M:%SZ", time.gmtime(time.time()))))
+    print("Spots at {}:".format(_time.z(time.time())))
     print("\n".join([str(spot) for spot in spots]))
     print("")
     sys.stdout.flush()
@@ -387,7 +385,7 @@ def main(args):
     spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
     spot_cleanup_timer.start(1000)
 
-    st = SpottingThread.textfile("../rbn.txt")
+    st = SpottingThread.textfile("rbn.txt")
     st.spot_received.connect(aggregator.spot_received)
     st.start()
 

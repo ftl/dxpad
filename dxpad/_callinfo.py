@@ -66,7 +66,7 @@ class Call:
 class Info:
     def __init__(self, call):
         self.call = call
-        self.last_touch = time.time()
+        self.last_touch = 0
         self.qrz_id = None
         self.hamqth_id = None
         self.dxcc_info = None
@@ -79,36 +79,45 @@ class Info:
         self.email = None
         self.qsl_service = None
         self.qsl_via = None
+        self.last_seen = 0
+        self.last_seen_frequency = 0
+        self.spot_sources = 0
 
     def __str__(self):
         result = "*" * (len(str(self.call)) + 4) + "\n"
         result += "* " + str(self.call) + " *\n"
         result += "*" * (len(str(self.call)) + 4) + "\n"
         if self.name:
-            result += "name: " + self.name + "\n"
+            result += "name: {}\n".format(self.name)
         if self.postal_address:
-            result += "address: " + "\n".join(self.postal_address) + "\n"
+            result += "address: {}\n".format("\n".join(self.postal_address))
         if self.dok:
-            result += "dok: " + self.dok + "\n"
+            result += "dok: {}\n".format(self.dok)
         if self.dxcc_info:
-            result += "country: " + self.dxcc_info.name + "\n"
-            result += ("continent: " + self.dxcc_info.continent 
-                     + " itu: " + str(self.dxcc_info.itu_zone) 
-                     + " cq: " + str(self.dxcc_info.cq_zone) + "\n")
+            result += "country: {}\n".format(self.dxcc_info.name)
+            result += "continent: {} itu: {} cq: {}\n".format(
+                        self.dxcc_info.continent,
+                        str(self.dxcc_info.itu_zone),
+                        str(self.dxcc_info.cq_zone))
         if self.iota:
-            result += "iota: " + self.iota + "\n"
+            result += "iota: {}\n".format(self.iota)
         if self.latlon:
-            result += "lat/lon: " + str(self.latlon) + "\n"
+            result += "lat/lon: {}\n".format(str(self.latlon))
         if self.locator:
-            result += "grid: " + str(self.locator) + "\n"
+            result += "grid: {}\n".format(str(self.locator))
         if self.email:
-            result += "email: " + str(self.email) + "\n"
+            result += "email: {}\n".format(str(self.email))
         if self.qrz_id:
-            result += "qrz.com: " + self.qrz_id + "\n"
+            result += "qrz.com: {}\n".format(self.qrz_id)
         if self.qsl_service:
-            result += "QSL: " + ", ".join(self.qsl_service) + "\n"
-        if self.qsl_manager:
-            result += "QSL via: " + self.qsl_via + "\n"
+            result += "QSL: {}\n".format(", ".join(self.qsl_service))
+        if self.qsl_via:
+            result += "QSL via: {}\n".format(self.qsl_via)
+        if self.last_seen:
+            result += ("last seen {0} on {1:>8.1f} kHz ({2})\n"
+                    .format(_time.z(self.last_seen),
+                        self.last_seen_frequency,
+                        self.spot_sources))
 
         result += "last touch: {}".format(_time.z(self.last_touch))
 
@@ -137,3 +146,11 @@ class Info:
         elif self.locator:
             return self.locator.bearing_from(locator)
         return 0
+
+
+def main(args):
+    info = Info(Call("AA1BB"))
+    info.last_seen = time.time()
+    info.last_seen_frequency = 14076000
+
+    print(info)
