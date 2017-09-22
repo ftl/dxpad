@@ -289,18 +289,19 @@ class SpotAggregator(QtCore.QObject):
                 i += 1
                 continue
 
-            merge_target = merged_spots[merge_candidates[0]]
+            merge_target_index = merge_candidates[0]
+            merge_target = merged_spots[merge_target_index]
             for j in sorted(merge_candidates[1:]):
-                merge_target.merge(merged_spots[j])
-                merged_spots = merged_spots[:j] + merged_spots[j + 1:]
+                merge_source = merged_spots.pop(j)
+                merge_target.merge(merge_source)
 
-            if merge_candidates[0] != i:
+            if merge_target_index != i:
                 i += 1
 
         return merged_spots
 
     def _find_merge_candidates(self, spots, spot, spots_on_frequency):
-        return [n[0] for n in 
+        return [index for (index, neighbour) in 
             sorted(
                 [(neighbour_index, spots[neighbour_index])
                     for neighbour_index in spots_on_frequency
@@ -308,7 +309,6 @@ class SpotAggregator(QtCore.QObject):
                         spots[neighbour_index].call.base_call) <= 1],
                 key= lambda n: len(n[1].sources),
                 reverse= True)]
-
 
     def _spots_on_frequency(self, spots, index):
         spot = spots[index]
@@ -326,7 +326,6 @@ class SpotAggregator(QtCore.QObject):
             if lower_bound >= 0:
                 frequency = spots[lower_bound].frequency
         return range(lower_bound + 1, upper_bound)
-
 
     def _group_spots_by_call(self, spots):
         grouped_spots = {}
