@@ -52,8 +52,8 @@ def main(args):
     bandmap = _bandmap.BandMap()
     map = _map.Map()
     map.select_band(vfo.band)
+    map.set_own_call(config.call)
     map.set_own_locator(config.locator)
-    map.select_call(config.call)
     map.select_continents([dxcc.find_dxcc_info(config.call).continent])
     vfo.band_changed.connect(map.select_band)
     notepad = _notepad.Notepad()
@@ -73,6 +73,7 @@ def main(args):
 
 
     infohub.locator_changed.connect(map.set_destination_locator)
+    infohub.call_looked_up.connect(map.select_call)
     aggregator.update_spots.connect(bandmap.spots_received)
     aggregator.update_spots.connect(map.highlight_spots)
     aggregator.update_spots.connect(infohub.calls_seen)

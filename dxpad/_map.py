@@ -120,7 +120,10 @@ class Map(QtCore.QObject):
             cell_width = self.spot_cell_width, 
             cell_height = self.spot_cell_height)
         self.band = _bandplan.NO_BAND
-        self.spot_filters = [SpotterContinentFilter(), ReceivingCallFilter()]
+        self.spot_filters = [
+            SpotterContinentFilter(),
+            ReceivingCallFilter(),
+            ReceivingCallFilter()]
         self.spot_filter = self.spot_filters[0]
 
     @QtCore.Slot(bool)
@@ -136,6 +139,11 @@ class Map(QtCore.QObject):
     @QtCore.Slot(bool)
     def show_grayline(self, state):
         self.grayline_visible = state
+        self.changed.emit()
+
+    @QtCore.Slot(object)
+    def set_own_call(self, call):
+        self.spot_filters[1].call = call
         self.changed.emit()
 
     @QtCore.Slot(object)
@@ -165,8 +173,11 @@ class Map(QtCore.QObject):
 
     @QtCore.Slot(object)
     def select_call(self, call):
-        self.spot_filters[1].call = call
+        self.spot_filters[2].call = call
         self.changed.emit()
+
+    def selected_call(self):
+        return self.spot_filters[2].call
 
     @QtCore.Slot(object)
     def select_band(self, band):
@@ -174,8 +185,13 @@ class Map(QtCore.QObject):
         self.changed.emit()
 
     @QtCore.Slot()
-    def show_spots_receiving_selected_call(self):
+    def show_spots_receiving_own_call(self):
         self.spot_filter = self.spot_filters[1]
+        self.changed.emit()
+
+    @QtCore.Slot()
+    def show_spots_receiving_selected_call(self):
+        self.spot_filter = self.spot_filters[2]
         self.changed.emit()
 
     @QtCore.Slot(object)
@@ -363,6 +379,7 @@ class MapWindow(_windowmanager.ManagedWindow):
         self.resize(1200, 600)
         self.map = map
         self.map_widget = MapWidget(map)
+        self.map.changed.connect(self._map_changed)
 
         show_spots_received_on_selected_continents = QtGui.QRadioButton()
         show_spots_received_on_selected_continents.setText(
@@ -371,21 +388,36 @@ class MapWindow(_windowmanager.ManagedWindow):
         show_spots_received_on_selected_continents.clicked.connect(
             self.map.show_spots_received_on_selected_continents)
 
-        show_spots_receiving_selected_call = QtGui.QRadioButton()
-        show_spots_receiving_selected_call.setText("Meine Reichweite")
-        show_spots_receiving_selected_call.setChecked(False)
-        show_spots_receiving_selected_call.clicked.connect(
+        show_spots_receiving_own_call = QtGui.QRadioButton()
+        show_spots_receiving_own_call.setText("Meine Reichweite")
+        show_spots_receiving_own_call.setChecked(False)
+        show_spots_receiving_own_call.clicked.connect(
+            self.map.show_spots_receiving_own_call)
+
+        self.show_spots_receiving_selected_call = QtGui.QRadioButton()
+        self.show_spots_receiving_selected_call.setText("Reichweite von")
+        self.show_spots_receiving_selected_call.setChecked(False)
+        self.show_spots_receiving_selected_call.clicked.connect(
             self.map.show_spots_receiving_selected_call)
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(show_spots_received_on_selected_continents)
-        hbox.addWidget(show_spots_receiving_selected_call)
+        hbox.addWidget(show_spots_receiving_own_call)
+        hbox.addWidget(self.show_spots_receiving_selected_call)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox)
         vbox.addWidget(self.map_widget)
 
         self.setLayout(vbox)
+
+    def _map_changed(self):
+        selected_call = self.map.selected_call()
+        if selected_call:
+            self.show_spots_receiving_selected_call.setText("Reichweite von {}"
+                .format(selected_call))
+        else:
+            self.show_spots_receiving_selected_call.setText("Reichweite von")
 
 
 def highlight_spot(map_widget):    
