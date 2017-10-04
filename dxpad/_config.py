@@ -8,8 +8,8 @@ from PySide import QtCore
 
 from . import _grid, _callinfo
 
-DEFAULT_CALL = _callinfo.Call("dl0aaa")
-DEFAULT_LOCATOR = _grid.Locator("JO51aa")
+DEFAULT_CALL = "dl0aaa"
+DEFAULT_LOCATOR = "JO51aa"
 
 """
 Clusters for testing:
