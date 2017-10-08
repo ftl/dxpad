@@ -117,12 +117,23 @@ class TextfileClient:
         self.running = False
 
 
+class FastTextfileClient:
+    def __init__(self, filename):
+        self.filename = filename
+
+    def run(self, line_callback):
+        with open(self.filename) as f:
+            for line in f:
+                line_callback(line)
+
+
 class ClusterSpotter:
     _spot_expression = re.compile(r'DX de ([A-Z0-9/]+)(-.+?)?:?\s*([0-9]+\.[0-9]+)\s+([A-Z0-9/]+)\s+(.+?)\s([0-9]{4})Z(\s+([A-Z]{2}[0-9]{2}))?')
     _rbn_comment_expression = re.compile(r'([A-Z0-9]+)\s+([0-9]+) dB\s+([0-9]+) (WPM|BPS)\s+(.*)\s*')
 
     def __init__(self, client):
         self.client = client
+        self.record = False
 
     def run(self, spot_callback):
         self.client.run(lambda line: self._line_received(line, spot_callback))
@@ -134,6 +145,10 @@ class ClusterSpotter:
         return self.client.running
 
     def _line_received(self, line, spot_callback):
+        if self.record:
+            with open("rbn.txt", "a") as f:
+                f.write(line)
+
         spot_match = self._spot_expression.match(line)
         if not spot_match:
             print(line)
@@ -277,55 +292,59 @@ class SpotAggregator(QtCore.QObject):
         self.update_spots.emit(spots_to_emit)
 
     def _merge_spots_with_similar_call(self, spots):
-        merged_spots = spots
+        result = []
+        window = []
+        tail = spots
+
+        while tail or window:
+            window, tail = self._pop_frequency_window(window, tail)
+            merge_candidates, window = self._extract_merge_candidates(window)
+            merge_target = self._merge_spots(merge_candidates)
+            if merge_target:
+                result.append(merge_target)
+        return result
+
+    def _pop_frequency_window(self, current_window, spots):
+        window = current_window
+        tail = spots
+        if window:
+            lower_bound_frequency = window[0].frequency
+        elif tail:
+            lower_bound_frequency = tail[0].frequency
+        else:
+            return (window, tail)
+
+        while tail:
+            next_spot = tail[0]
+            if next_spot.frequency - lower_bound_frequency <= FREQUENCY_WINDOW:
+                window.append(tail.pop(0))
+            else:
+                break
+        return window, tail
+
+    def _extract_merge_candidates(self, spots):
+        if not spots: return ([], [])
+        remainder = spots
+        seam = remainder.pop(0)
+        merge_candidates = [seam]
         i = 0
-        while i < len(merged_spots):
-            spot = merged_spots[i]
-            spots_on_frequency = self._spots_on_frequency(merged_spots, i)
-            merge_candidates = self._find_merge_candidates(merged_spots, 
-                spot, spots_on_frequency)
-
-            if len(merge_candidates) <= 1:
+        while i < len(remainder):
+            spot = remainder[i]
+            distance = ls.distance(seam.call.base_call, spot.call.base_call)
+            if distance <= 1:
+                merge_candidates.append(spot)
+                remainder.pop(i)
+            else:
                 i += 1
-                continue
+        return merge_candidates, remainder
 
-            merge_target_index = merge_candidates[0]
-            merge_target = merged_spots[merge_target_index]
-            for j in sorted(merge_candidates[1:]):
-                merge_source = merged_spots.pop(j)
-                merge_target.merge(merge_source)
-
-            if merge_target_index != i:
-                i += 1
-
-        return merged_spots
-
-    def _find_merge_candidates(self, spots, spot, spots_on_frequency):
-        return [index for (index, neighbour) in 
-            sorted(
-                [(neighbour_index, spots[neighbour_index])
-                    for neighbour_index in spots_on_frequency
-                    if ls.distance(spot.call.base_call, 
-                        spots[neighbour_index].call.base_call) <= 1],
-                key= lambda n: len(n[1].sources),
-                reverse= True)]
-
-    def _spots_on_frequency(self, spots, index):
-        spot = spots[index]
-        frequency = spot.frequency
-        upper_bound = index
-        while (upper_bound < len(spots)) \
-                and abs(frequency - spot.frequency) <= FREQUENCY_WINDOW:
-            upper_bound += 1
-            if upper_bound < len(spots):
-                frequency = spots[upper_bound].frequency
-        lower_bound = index
-        while (lower_bound >= 0) \
-                and abs(frequency - spot.frequency) <= FREQUENCY_WINDOW:
-            lower_bound -= 1
-            if lower_bound >= 0:
-                frequency = spots[lower_bound].frequency
-        return range(lower_bound + 1, upper_bound)
+    def _merge_spots(self, spots):
+        if not spots: return None
+        merge_candidates = sorted(spots, key= lambda s: len(s.sources))
+        merge_target = merge_candidates.pop()
+        for spot in merge_candidates:
+            merge_target.merge(spot)
+        return merge_target
 
     def _group_spots_by_call(self, spots):
         grouped_spots = {}
@@ -366,6 +385,18 @@ def print_spots(spots):
 
 
 def main(args):
+    dxcc = _dxcc.DXCC()
+    dxcc.load()
+
+    textfileClient = FastTextfileClient("rbn.txt")
+    spotter = ClusterSpotter(textfileClient)
+    aggregator = SpotAggregator(dxcc)
+    aggregator.update_spots.connect(print_spots)
+    spotter.run(aggregator.spot_received)
+    aggregator.cleanup_spots()
+
+
+def main_(args):
     app = QtGui.QApplication(args)
 
     wid = QtGui.QWidget()
@@ -385,6 +416,8 @@ def main(args):
     spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
     spot_cleanup_timer.start(1000)
 
+    # st = SpottingThread.telnet("arcluster.reversebeacon.net", 7000, "dl3ney")
+    # st.spotter.record = True
     st = SpottingThread.textfile("rbn.txt")
     st.spot_received.connect(aggregator.spot_received)
     st.start()
