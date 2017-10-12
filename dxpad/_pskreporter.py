@@ -41,8 +41,7 @@ class PskReporterWorker(QtCore.QThread):
         print("PskReporter: fetch spots")
         response = requests.get(
             "http://retrieve.pskreporter.info/query", 
-            params = {"senderCallsign": self.grid, "rronly": "1", 
-                "modify": "grid", "flowStartSeconds": "-600"})
+            params = {"rronly": "1", "flowStartSeconds": "-600"})
         if response.status_code != 200:
             print("PskReporter: request failed")
             print(str(response.status_code))
