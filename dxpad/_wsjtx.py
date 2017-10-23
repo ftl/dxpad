@@ -85,12 +85,38 @@ class IncomingMessage:
         return self.data[start:(self.current_index)].decode("utf-8")
 
 
+class DecodedMessage:
+    def __init__(self, unique_id, new, ms_since_midnight, snr, 
+            delta_time_seconds, delta_freqzency_Hz, mode, message_content):
+        self.unique_id = unique_id
+        self.new = new
+        self.ms_since_midnight = ms_since_midnight
+        self.snr = snr
+        self.delta_time_seconds = delta_time_seconds
+        self.delta_freqzency_Hz = delta_freqzency_Hz
+        self.mode = mode
+        self.message_content = message_content
+        self.message_fields = message_content.split(" ")
+        self.details = None
+
+    def __repr__(self):
+        return "Message(\"{}\")".format(str(self))
+
+    def __str__(self):
+        return "{2} {1} {0}".format(self.message_content, self.snr, 
+            self.delta_freqzency_Hz)
+
+    def is_cq(self):
+        return len(self.message_fields) > 0  and (
+            self.message_fields[0] == "CQ" or self.message_fields[0] == "QRZ")
+
+
 class Parser(QtCore.QObject):
     heartbeat = QtCore.Signal(str, int, str, str)
     status = QtCore.Signal(
         str, int, str, str, str, str, bool, bool, bool, int, int, str, str, 
         str, bool, str, bool)
-    decode = QtCore.Signal(str, bool, int, int, float, int, str, str)
+    decode = QtCore.Signal(object)
     clear = QtCore.Signal(str)
     log_qso = QtCore.Signal(
         str, int, str, str, int, str, str, str, str, str, str, int)
@@ -158,9 +184,10 @@ class Parser(QtCore.QObject):
         delta_freqzency_Hz = message.read_quint32()
         mode = message.read_utf8()
         message_content = message.read_utf8()
-        self.decode.emit(
-            unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
-            delta_freqzency_Hz, mode, message_content)
+        decoded_message = DecodedMessage(unique_id, new, ms_since_midnight, 
+            snr, delta_time_seconds, delta_freqzency_Hz, mode, message_content)
+
+        self.decode.emit(decoded_message)
 
     def _read_clear(self, message):
         unique_id = message.read_utf8()
@@ -414,6 +441,23 @@ class WSJTX(QtCore.QObject):
         self.receiver.wait()
 
 
+class CQWatch(QtCore.QObject):
+    def __init__(self, parent = None):
+        QtCore.QObject.__init__(self, parent)
+        self.cq_calls = []
+
+    def decoding_updated(self, decoding):
+        if decoding:
+            self.cq_calls = []
+        else:
+            print("Calling CQ:")
+            print("\n".join(map(str, self.cq_calls)))
+
+    def decode(self, message):
+        if message.is_cq():
+            self.cq_calls.append(message)
+
+
 def print_heartbeat(unique_id, maximum_schema_number, version, revision):
     print("heartbeat")
     print("\tunique id " + unique_id)
@@ -421,11 +465,9 @@ def print_heartbeat(unique_id, maximum_schema_number, version, revision):
     print("\tversion " + version)
     print("\trevision " + revision)
 
-def print_decode(
-        unique_id, new, ms_since_midnight, snr, delta_time_seconds, 
-        delta_freqzency_Hz, mode, message_content):
+def print_decode(message):
     print("decode")
-    print("\tmessage " + str(message_content))
+    print("\tmessage " + str(decoded_message))
 
 def print_clear(unique_id):
     print("clear")
@@ -466,16 +508,20 @@ def main(args):
         config.listen_host, config.listen_port, config.repeater, 
         config.repeater_host, config.repeater_port)
 
-    wsjtx.parser.heartbeat.connect(print_heartbeat)
-    wsjtx.parser.decode.connect(print_decode)
-    wsjtx.parser.clear.connect(print_clear)
-    wsjtx.parser.log_qso.connect(print_log_qso)
-    wsjtx.parser.close.connect(print_close)
-    wsjtx.parser.wspr_decode.connect(print_wspr_decode)
+    cq_watch = CQWatch()
+    wsjtx.status.decoding_updated.connect(cq_watch.decoding_updated)
+    wsjtx.parser.decode.connect(cq_watch.decode)
 
-    wsjtx.status.dx_call_updated.connect(print_dx_call_updated)
-    wsjtx.status.transmitting_updated.connect(print_transmitting_updated)
-    wsjtx.status.decoding_updated.connect(print_decoding_updated)
+#    wsjtx.parser.heartbeat.connect(print_heartbeat)
+#    wsjtx.parser.decode.connect(print_decode)
+#    wsjtx.parser.clear.connect(print_clear)
+#    wsjtx.parser.log_qso.connect(print_log_qso)
+#    wsjtx.parser.close.connect(print_close)
+#    wsjtx.parser.wspr_decode.connect(print_wspr_decode)
+
+#    wsjtx.status.dx_call_updated.connect(print_dx_call_updated)
+#    wsjtx.status.transmitting_updated.connect(print_transmitting_updated)
+#    wsjtx.status.decoding_updated.connect(print_decoding_updated)
 
     wsjtx.start()
 
