@@ -86,7 +86,7 @@ class SpotterFilter:
 
     def spot_locators(self, spot):
         if not(spot.dxcc_info): return []
-        return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.1)]
+        return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.5)]
 
     def add_heat(self, a, b):
         return a + b
