@@ -75,6 +75,21 @@ class SpotterContinentFilter:
     def add_heat(self, a, b):
         return a + b
 
+class SpotterFilter:
+    def __init__(self, call = None):
+        self.call = call
+
+    def filter_spot(self, spot):
+        if not self.call: return False
+        return len([source for source in spot.sources
+                    if self.call.base_call == source.source_call.base_call]) > 0
+
+    def spot_locators(self, spot):
+        if not(spot.dxcc_info): return []
+        return [(_grid.Locator.from_lat_lon(spot.dxcc_info.latlon), 0.1)]
+
+    def add_heat(self, a, b):
+        return a + b
 
 class ReceivingCallFilter:
     MAX_SNR = 30.0
@@ -123,7 +138,8 @@ class Map(QtCore.QObject):
         self.spot_filters = [
             SpotterContinentFilter(),
             ReceivingCallFilter(),
-            ReceivingCallFilter()]
+            ReceivingCallFilter(),
+            SpotterFilter()]
         self.spot_filter = self.spot_filters[0]
 
     @QtCore.Slot(bool)
@@ -174,6 +190,7 @@ class Map(QtCore.QObject):
     @QtCore.Slot(object)
     def select_call(self, call):
         self.spot_filters[2].call = call
+        self.spot_filters[3].call = call
         self.changed.emit()
 
     def selected_call(self):
@@ -192,6 +209,11 @@ class Map(QtCore.QObject):
     @QtCore.Slot()
     def show_spots_receiving_selected_call(self):
         self.spot_filter = self.spot_filters[2]
+        self.changed.emit()
+
+    @QtCore.Slot()
+    def show_spots_from_selected_call(self):
+        self.spot_filter = self.spot_filters[3]
         self.changed.emit()
 
     @QtCore.Slot(object)
@@ -400,10 +422,18 @@ class MapWindow(_windowmanager.ManagedWindow):
         self.show_spots_receiving_selected_call.clicked.connect(
             self.map.show_spots_receiving_selected_call)
 
+        self.show_spots_from_selected_call = QtGui.QRadioButton()
+        self.show_spots_from_selected_call.setText("Empfangen von")
+        self.show_spots_from_selected_call.setChecked(False)
+        self.show_spots_from_selected_call.clicked.connect(
+            self.map.show_spots_from_selected_call)
+
+
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(show_spots_received_on_selected_continents)
         hbox.addWidget(show_spots_receiving_own_call)
         hbox.addWidget(self.show_spots_receiving_selected_call)
+        hbox.addWidget(self.show_spots_from_selected_call)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addLayout(hbox)
@@ -416,8 +446,11 @@ class MapWindow(_windowmanager.ManagedWindow):
         if selected_call:
             self.show_spots_receiving_selected_call.setText("Reichweite von {}"
                 .format(selected_call))
+            self.show_spots_from_selected_call.setText("Empfangen von {}"
+                .format(selected_call))
         else:
             self.show_spots_receiving_selected_call.setText("Reichweite von")
+            self.show_spots_from_selected_call.setText("Empfangen von")
 
 
 def highlight_spot(map_widget):    
@@ -437,22 +470,29 @@ def main(args):
     dxcc = _dxcc.DXCC()
     dxcc.load()
     aggregator = _spotting.SpotAggregator(dxcc)
-    map = Map()
 
+    spot_cleanup_timer = QtCore.QTimer()
+    spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
+    spot_cleanup_timer.start(1000)
+    
+    map = Map()
     map.set_own_locator(config.locator)
     map.set_destination_locator(_grid.Locator("EM42kt"))
-    map.select_call(_callinfo.Call("UA9OC")) #config.call)
+    map.select_call(_callinfo.Call("K1TTT")) #config.call)
     map.select_continents([dxcc.find_dxcc_info(config.call).continent])
+    map.select_band(_bandplan.IARU_REGION_1[4])
     aggregator.update_spots.connect(map.highlight_spots)
 
     win = MapWindow(map)
     win.show()
 
-    clusters = [] #config.clusters
-    spotting_file = "../rbn.txt"
-    aggregator.start_spotting(clusters, spotting_file)
+    st = _spotting.SpottingThread.textfile("rbn.txt")
+    st.spot_received.connect(aggregator.spot_received)
+    st.start()
 
     result = app.exec_()
-    
-    aggregator.stop_spotting()
+
+    st.stop()
+    st.wait()
+
     sys.exit(result)
