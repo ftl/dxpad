@@ -22,9 +22,9 @@ class Call:
         match = CALL_EXPRESSION.match(raw_text)
         if not(match):
             print("Cannot find call: " + raw_text)
-        self.prefix = match.group(2).upper() if match.start(2) > -1 else None
+        self.prefix = match.group(2).upper() if match and match.start(2) > -1 else None
         self.base_call = match.group(3).upper()
-        self.suffix = match.group(5).upper() if match.start(5) > -1 else None
+        self.suffix = match.group(5).upper() if match and match.start(5) > -1 else None
         self.working_condition = (match.group(7).upper() 
                                   if match.start(7) > -1 
                                   else None)
