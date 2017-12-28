@@ -29,54 +29,99 @@ class PskReporterSpot(_spotting.Spot):
         return ("{} pskreporter(mode: {}, snr: {})"
                 .format(_spotting.Spot.__str__(self), self.mode, self.snr))
 
+    def __hash__(self):
+        return hash(
+            (self.source_call, self.call, self.frequency, self.time, self.mode,
+                self.snr))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return hash(self) != hash(other)
+
+
 class PskReporterWorker(QtCore.QThread):
     MAX_SNR = 30.0
     spot_received = QtCore.Signal(object)
 
-    def __init__(self, grid, parent = None):
+    def __init__(self, own_call, grid, parent = None):
         QtCore.QThread.__init__(self, parent)
+        self.own_call = own_call
         self.grid = grid
+        self.dx_call = None
+
+    @QtCore.Slot(str)
+    def set_dx_call(self, dx_call):
+        self.dx_call = dx_call
 
     def run(self):
+        queries = [
+            {"senderCallsign": self.own_call, "rronly": "1", "flowStartSeconds": "-600"},
+            {"receiverCallsign": self.own_call, "rronly": "1", "flowStartSeconds": "-600"},
+            {"senderCallsign": self.dx_call, "rronly": "1", "flowStartSeconds": "-600"},
+            {"receiverCallsign": self.dx_call, "rronly": "1", "flowStartSeconds": "-600"},
+            {"rronly": "1", "flowStartSeconds": "-600"}
+        ]
+        incoming_spots = set()
+        for query in queries:
+            if not(self._query_valid(query)): continue
+
+            xml_data = self._request_spots(query)
+            if not(xml_data): return
+            for element in xml_data.getElementsByTagName("receptionReport"):
+                incoming_spot = self._element_to_spot(element)
+                if not(incoming_spot): continue
+                if not(incoming_spot in incoming_spots):
+                    self.spot_received.emit(incoming_spot)
+                    incoming_spots.add(incoming_spot)
+
+    def _query_valid(self, query):
+        for value in query.values():
+            if not(value): return False
+        return True
+
+    def _request_spots(self, query_parameters):
         print("PskReporter: fetch spots")
         response = requests.get(
             "http://retrieve.pskreporter.info/query", 
-            params = {"rronly": "1", "flowStartSeconds": "-600"})
+            params = query_parameters)
         if response.status_code != 200:
             print("PskReporter: request failed")
             print(str(response.status_code))
             print(response.text)
-            return
-        xml_data = minidom.parseString(response.text)
-        for element in xml_data.getElementsByTagName("receptionReport"):
-            if not (_callinfo.Call.is_valid_call(
-                        element.getAttribute("receiverCallsign")) 
-                    and _grid.Locator.is_valid_locator(
-                        element.getAttribute("receiverLocator")) 
-                    and _callinfo.Call.is_valid_call(
-                        element.getAttribute("senderCallsign")) 
-                    and element.hasAttribute("frequency")): 
-                continue
-            
-            source_call = _callinfo.Call(element.getAttribute("receiverCallsign"))
-            source_grid = _grid.Locator(element.getAttribute("receiverLocator"))
-            call = _callinfo.Call(element.getAttribute("senderCallsign"))
-            frequency = int(element.getAttribute("frequency")) / 1000
-            time = int(element.getAttribute("flowStartSeconds"))
-            mode = element.getAttribute("mode")
-            snr = float(element.getAttribute("sNR")) if element.hasAttribute("sNR") else 0.0
-            normalized_snr = snr if snr >= 0.0 else self.MAX_SNR + snr
+            return None
+        return minidom.parseString(response.text)
 
-            incoming_spot = PskReporterSpot(call, frequency, time, source_call, source_grid, mode, normalized_snr)
-            self.spot_received.emit(incoming_spot)
+    def _element_to_spot(self, element):
+        if not (_callinfo.Call.is_valid_call(
+                    element.getAttribute("receiverCallsign")) 
+                and _grid.Locator.is_valid_locator(
+                    element.getAttribute("receiverLocator")) 
+                and _callinfo.Call.is_valid_call(
+                    element.getAttribute("senderCallsign")) 
+                and element.hasAttribute("frequency")): 
+            return None
+        
+        source_call = _callinfo.Call(element.getAttribute("receiverCallsign"))
+        source_grid = _grid.Locator(element.getAttribute("receiverLocator"))
+        call = _callinfo.Call(element.getAttribute("senderCallsign"))
+        frequency = int(element.getAttribute("frequency")) / 1000
+        time = int(element.getAttribute("flowStartSeconds"))
+        mode = element.getAttribute("mode")
+        snr = float(element.getAttribute("sNR")) if element.hasAttribute("sNR") else 0.0
+        normalized_snr = snr if snr >= 0.0 else self.MAX_SNR + snr
+
+        return PskReporterSpot(call, frequency, time, source_call,
+            source_grid, mode, normalized_snr)
 
 
 class PskReporter(QtCore.QObject):
     spot_received = QtCore.Signal(object)
 
-    def __init__(self, own_locator, parent = None):
+    def __init__(self, own_call, own_locator, parent = None):
         QtCore.QObject.__init__(self, parent)
-        self.worker = PskReporterWorker(str(own_locator)[:2])
+        self.worker = PskReporterWorker(str(own_call), str(own_locator)[:2])
         self.worker.spot_received.connect(self._spot_received)
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.worker.start)
@@ -93,6 +138,10 @@ class PskReporter(QtCore.QObject):
         self.timer.stop()
         self.worker.wait()
 
+    @QtCore.Slot(object)
+    def set_dx_call(self, dx_call):
+        self.worker.set_dx_call(str(dx_call))
+
 
 def print_spot(spot):
     print(str(spot))
@@ -107,8 +156,9 @@ def main(args):
 
     config = _config.load_config()
 
-    psk_reporter = PskReporter(config.locator)
+    psk_reporter = PskReporter(config.call, config.locator)
     psk_reporter.spot_received.connect(print_spot)
+    psk_reporter.set_dx_call("GM0HUU")
     psk_reporter.start()
 
     result = app.exec_()

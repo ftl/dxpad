@@ -48,7 +48,7 @@ def main(args):
     dxcc.load()
     aggregator = _spotting.SpotAggregator(dxcc)
     spot_cleanup_timer = QtCore.QTimer()
-    pskreporter = _pskreporter.PskReporter(config.locator)
+    pskreporter = _pskreporter.PskReporter(config.call, config.locator)
     bandmap = _bandmap.BandMap()
     map = _map.Map()
     map.select_band(vfo.band)
@@ -74,6 +74,7 @@ def main(args):
 
     infohub.locator_changed.connect(map.set_destination_locator)
     infohub.call_looked_up.connect(map.select_call)
+    infohub.call_looked_up.connect(pskreporter.set_dx_call)
     aggregator.update_spots.connect(bandmap.spots_received)
     aggregator.update_spots.connect(map.highlight_spots)
     aggregator.update_spots.connect(infohub.calls_seen)
