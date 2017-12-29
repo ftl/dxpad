@@ -10,6 +10,7 @@ template URL: retrieve.pskreporter.info/query?senderCallsign=jn&rronly=1&modify=
 
 import sys
 import requests
+import time
 import xml.dom.minidom as minidom
 
 from PySide import QtCore, QtGui
@@ -43,6 +44,7 @@ class PskReporterSpot(_spotting.Spot):
 
 class PskReporterWorker(QtCore.QThread):
     MAX_SNR = 30.0
+    MIN_REQUEST_TIME = 200.0
     spot_received = QtCore.Signal(object)
 
     def __init__(self, own_call, grid, parent = None):
@@ -50,10 +52,12 @@ class PskReporterWorker(QtCore.QThread):
         self.own_call = own_call
         self.grid = grid
         self.dx_call = None
+        self.query_last_request = {}
 
     @QtCore.Slot(str)
     def set_dx_call(self, dx_call):
         self.dx_call = dx_call
+        self.start()
 
     def run(self):
         queries = [
@@ -63,35 +67,64 @@ class PskReporterWorker(QtCore.QThread):
             {"receiverCallsign": self.dx_call, "rronly": "1", "flowStartSeconds": "-600"},
             {"rronly": "1", "flowStartSeconds": "-600"}
         ]
-        incoming_spots = set()
+        self._run_queries(queries)
+
+    def _run_queries(self, queries):
+        unique_spots = set()
         for query in queries:
-            if not(self._query_valid(query)): continue
+            self._run_query(query, unique_spots)
 
-            xml_data = self._request_spots(query)
-            if not(xml_data): return
-            for element in xml_data.getElementsByTagName("receptionReport"):
-                incoming_spot = self._element_to_spot(element)
-                if not(incoming_spot): continue
-                if not(incoming_spot in incoming_spots):
-                    self.spot_received.emit(incoming_spot)
-                    incoming_spots.add(incoming_spot)
+    def _run_query(self, query, unique_spots):
+        print("PskReporter: fetch spots " + str(query))
 
-    def _query_valid(self, query):
-        for value in query.values():
-            if not(value): return False
-        return True
+        xml_data = self._request_spots(query)
+        if not(xml_data):
+            return
+        
+        spot_count = 0
+        for element in xml_data.getElementsByTagName("receptionReport"):
+            incoming_spot = self._element_to_spot(element)
+            if not(incoming_spot): 
+                continue
+            
+            #if not(incoming_spot in unique_spots):
+            self.spot_received.emit(incoming_spot)
+            #unique_spots.add(incoming_spot)
+            spot_count += 1
 
-    def _request_spots(self, query_parameters):
-        print("PskReporter: fetch spots")
+        print("PskReporter: received {} spots".format(spot_count))
+
+    def _request_spots(self, query):
+        if not(self._is_query_valid(query)):
+            return None
+
         response = requests.get(
             "http://retrieve.pskreporter.info/query", 
-            params = query_parameters)
+            params = query)
         if response.status_code != 200:
             print("PskReporter: request failed")
             print(str(response.status_code))
             print(response.text)
             return None
         return minidom.parseString(response.text)
+
+    def _is_query_valid(self, query):
+        for value in query.values():
+            if not(value): 
+                print("PskReporter: not all query parameters have a valid value")
+                return False
+
+        query_hash = hash(tuple(sorted(query.keys()) + sorted(query.values())))
+        now = time.time()
+
+        if query_hash in self.query_last_request:
+            last_request = self.query_last_request[query_hash]
+            if now - last_request < self.MIN_REQUEST_TIME:
+                print("PskReporter: the last request of this query is too close: " + str(now - last_request))
+                return False
+
+        self.query_last_request[query_hash] = now
+        return True
 
     def _element_to_spot(self, element):
         if not (_callinfo.Call.is_valid_call(
