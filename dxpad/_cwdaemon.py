@@ -85,7 +85,7 @@ class CWDaemon(QtCore.QObject):
             self.busy.emit()
         self.in_index += 1
         self._send_command("h", self.in_index)
-        self.connection.send(text)
+        self.connection.send(" " + text)
 
     def _send_command(self, command, value = ""):
         self.connection.send("\x1b{}{}".format(command, value))
@@ -162,3 +162,5 @@ def main(args):
     d.stop()
 
     sys.exit(result)
+
+# run cwdaemon for testing: cwdaemon -yi -xs -n -d null
