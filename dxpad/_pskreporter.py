@@ -75,7 +75,7 @@ class PskReporterWorker(QtCore.QThread):
             self._run_query(query, unique_spots)
 
     def _run_query(self, query, unique_spots):
-        print("PskReporter: fetch spots " + str(query))
+        # print("PskReporter: fetch spots " + str(query))
 
         xml_data = self._request_spots(query)
         if not(xml_data):
@@ -92,7 +92,7 @@ class PskReporterWorker(QtCore.QThread):
             #unique_spots.add(incoming_spot)
             spot_count += 1
 
-        print("PskReporter: received {} spots".format(spot_count))
+        # print("PskReporter: received {} spots".format(spot_count))
 
     def _request_spots(self, query):
         if not(self._is_query_valid(query)):
@@ -111,7 +111,7 @@ class PskReporterWorker(QtCore.QThread):
     def _is_query_valid(self, query):
         for value in query.values():
             if not(value): 
-                print("PskReporter: not all query parameters have a valid value")
+                # print("PskReporter: not all query parameters have a valid value")
                 return False
 
         query_hash = hash(tuple(sorted(query.keys()) + sorted(query.values())))
@@ -120,7 +120,7 @@ class PskReporterWorker(QtCore.QThread):
         if query_hash in self.query_last_request:
             last_request = self.query_last_request[query_hash]
             if now - last_request < self.MIN_REQUEST_TIME:
-                print("PskReporter: the last request of this query is too close: " + str(now - last_request))
+                # print("PskReporter: the last request of this query is too close: " + str(now - last_request))
                 return False
 
         self.query_last_request[query_hash] = now
