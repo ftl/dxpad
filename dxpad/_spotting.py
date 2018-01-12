@@ -61,6 +61,7 @@ class RbnSpot(Spot):
 
 class TelnetClient:
     ENCODING = "latin_1"
+
     def __init__(self, hostname, port, call, password = ""):
         self.hostname = hostname
         self.port = port
@@ -79,11 +80,20 @@ class TelnetClient:
         self.running = True
 
         buffer = ""
+        line = ""
         while self.running:
-            buffer += telnet.read_some().decode(self.ENCODING)
+            try:
+                buffer += telnet.read_until(b"\n", 1).decode(self.ENCODING)
+            except EOFError:
+                print("Connection closed by {}:{}!".format(self.hostname, self.port))
+                self.running = False
+
             while buffer.find("\n") != -1:
                 line, buffer = buffer.split("\n", 1)
                 line_callback(line)
+                
+            if line.strip() == "Please enter your call:":
+                telnet.write(str(self.call + "\n").encode(self.ENCODING))
             if buffer.endswith("Please enter your call: "):
                 telnet.write(str(self.call + "\n").encode(self.ENCODING))
             if buffer.endswith("callsign: "):
@@ -384,7 +394,7 @@ def print_spots(spots):
     sys.stderr.flush()
 
 
-def main(args):
+def main_(args):
     dxcc = _dxcc.DXCC()
     dxcc.load()
 
@@ -396,7 +406,7 @@ def main(args):
     aggregator.cleanup_spots()
 
 
-def main_(args):
+def main(args):
     app = QtGui.QApplication(args)
 
     wid = QtGui.QWidget()
@@ -416,9 +426,9 @@ def main_(args):
     spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
     spot_cleanup_timer.start(1000)
 
-    # st = SpottingThread.telnet("arcluster.reversebeacon.net", 7000, "dl3ney")
+    st = SpottingThread.telnet("arcluster.reversebeacon.net", 7000, "dl3ney")
     # st.spotter.record = True
-    st = SpottingThread.textfile("rbn.txt")
+    #st = SpottingThread.textfile("rbn.txt")
     st.spot_received.connect(aggregator.spot_received)
     st.start()
 
