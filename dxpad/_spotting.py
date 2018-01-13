@@ -68,42 +68,55 @@ class TelnetClient:
         self.call = call
         self.password = password
         self.running = False
+        self.connected = False
 
     def run(self, line_callback):
-        try:
-            telnet = tn.Telnet(self.hostname, self.port)
-        except:
-            print("Cannot connect to {}:{}".format(self.hostname, self.port))
-            self.running = False
-            return
-        print("Connected to {}:{}".format(self.hostname, self.port))
         self.running = True
 
-        buffer = ""
-        line = ""
         while self.running:
-            try:
-                buffer += telnet.read_until(b"\n", 1).decode(self.ENCODING)
-            except EOFError:
-                print("Connection closed by {}:{}!".format(self.hostname, self.port))
-                self.running = False
+            telnet = self._connect()
+            if not telnet:
+                self.running = False 
+                return
+            self.connected = True
 
-            while buffer.find("\n") != -1:
-                line, buffer = buffer.split("\n", 1)
-                line_callback(line)
-                
-            if line.strip() == "Please enter your call:":
-                telnet.write(str(self.call + "\n").encode(self.ENCODING))
-            if buffer.endswith("Please enter your call: "):
-                telnet.write(str(self.call + "\n").encode(self.ENCODING))
-            if buffer.endswith("callsign: "):
-                telnet.write(str(self.call + "\n").encode(self.ENCODING))
-            if buffer.endswith("login: "):
-                telnet.write(str(self.call + "\n").encode(self.ENCODING))
-            if buffer.endswith("password: "):
-                telnet.write(str(self.password + "\n").encode(self.ENCODING))
+            buffer = ""
+            while self.running and self.connected:
+                try:
+                    buffer += telnet.read_until(b"\n", 1).decode(self.ENCODING)
+                except EOFError:
+                    self.connected = False
+                    print("Connection closed by {}:{}!".format(self.hostname, self.port))
+                    break
 
-        telnet.close()
+                line = ""
+                while buffer.find("\n") != -1:
+                    line, buffer = buffer.split("\n", 1)
+                    line_callback(line)
+                    
+                if line.strip() == "Please enter your call:":
+                    telnet.write(str(self.call + "\n").encode(self.ENCODING))
+                if buffer.endswith("Please enter your call: "):
+                    telnet.write(str(self.call + "\n").encode(self.ENCODING))
+                if buffer.endswith("callsign: "):
+                    telnet.write(str(self.call + "\n").encode(self.ENCODING))
+                if buffer.endswith("login: "):
+                    telnet.write(str(self.call + "\n").encode(self.ENCODING))
+                if buffer.endswith("password: "):
+                    telnet.write(str(self.password + "\n").encode(self.ENCODING))
+
+            telnet.close()
+            print("Disconnected from {}:{}".format(self.hostname, self.port))
+
+    def _connect(self):
+        try:
+            telnet = tn.Telnet(self.hostname, self.port)
+            print("Connected to {}:{}".format(self.hostname, self.port))
+            return telnet
+        except:
+            print("Cannot connect to {}:{}".format(self.hostname, self.port))
+            return None
+
 
     def stop(self):
         self.running = False
@@ -424,7 +437,7 @@ def main(args):
 
     spot_cleanup_timer = QtCore.QTimer()
     spot_cleanup_timer.timeout.connect(aggregator.cleanup_spots)
-    spot_cleanup_timer.start(1000)
+    spot_cleanup_timer.start(10000)
 
     st = SpottingThread.telnet("arcluster.reversebeacon.net", 7000, "dl3ney")
     # st.spotter.record = True
