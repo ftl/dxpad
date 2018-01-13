@@ -96,7 +96,7 @@ class DecodedMessage:
         self.delta_freqzency_Hz = delta_freqzency_Hz
         self.mode = mode
         self.message_content = message_content
-        self.message_fields = message_content.split(" ")
+        self.message_fields = message_content.split(" ") if message_content else None
         self.details = None
 
     def __repr__(self):
