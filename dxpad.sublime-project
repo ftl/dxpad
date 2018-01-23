@@ -1,0 +1,31 @@
+{
+	"build_systems":
+	[
+		{
+			"cmd":
+			[
+				"python3",
+				"-u",
+				"$project_path/dev.py"
+			],
+			"name": "Run DEV"
+		},
+		{
+			"cmd":
+			[
+				"/usr/bin/env",
+				"python3",
+				"-m",
+				"unittest"
+			],
+			"name": "Run Tests",
+			"working_dir": "$project_path"
+		}
+	],
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	]
+}

@@ -5,3 +5,4 @@ cty.dat
 pskreporter.xml
 rbn.txt
 dev.py
+*.sublime-workspace
