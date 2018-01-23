@@ -237,6 +237,7 @@ class ContestWidget(QtGui.QFrame):
 
         self.log_button = QtGui.QPushButton("Log", self)
         self.log_button.setEnabled(qso.complete)
+        self.clear_button = QtGui.QPushButton("Clear", self)
 
         grid = QtGui.QGridLayout(self)
         grid.addWidget(self.call_label, 0, 0)
@@ -255,7 +256,9 @@ class ContestWidget(QtGui.QFrame):
         grid.addWidget(self.repeat_button, 3, 1)
         grid.addWidget(self.question_button, 3, 2)
         grid.addWidget(self.agn_button, 3, 3)
-        grid.addWidget(self.log_button, 4, 0, 1, 4)
+        grid.addWidget(self.log_button, 4, 0, 1, 2)
+        grid.addWidget(self.clear_button, 4, 2, 1, 2)
+
         grid.setRowStretch(5, 1)
         self.setLayout(grid)
 
@@ -269,6 +272,7 @@ class ContestWidget(QtGui.QFrame):
         self.agn_button.clicked.connect(keyer.send_agn)
 
         self.log_button.clicked.connect(self.log)
+        self.clear_button.clicked.connect(self.clear)
 
         self.call_input.textChanged.connect(keyer.set_dx_call)
         self.call_input.textChanged.connect(qso.set_call)
@@ -290,18 +294,31 @@ class ContestWidget(QtGui.QFrame):
         self._shortcut("Ctrl+2", self.exchange_in_input.setFocus)
         self._shortcut("Ctrl+3", self.question_input.setFocus)
         self._shortcut("Ctrl+Enter", self.log)
+        self._shortcut("Shift+Esc", self.clear)
 
     def _shortcut(self, key, action):
         QtGui.QShortcut(QtGui.QKeySequence(key), self).activated.connect(action)
+
+    def _update_input_from_qso(self):
+        self.call_input.setText(self.qso.call)
+        self.exchange_in_input.setText(self.qso.exchange_in)
+
+    def _restart_input(self):
+        self.question_input.setText("")
+        self.call_input.setFocus()
 
     def log(self):
         if not self.log_button.isEnabled(): 
             return
         self.qso.next()
-        self.call_input.setText(self.qso.call)
-        self.exchange_in_input.setText(self.qso.exchange_in)
-        self.question_input.setText("")
-        self.call_input.setFocus()
+        self._update_input_from_qso()
+        self._restart_input()
+
+    def clear(self):
+        self.qso.set_call("")
+        self.qso.set_exchange_in("")
+        self._update_input_from_qso()
+        self._restart_input()
 
 
 class ContestWindow(QtGui.QWidget):
