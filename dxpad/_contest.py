@@ -237,7 +237,13 @@ class ContestWidget(QtGui.QFrame):
 
         self.log_button = QtGui.QPushButton("Log", self)
         self.log_button.setEnabled(qso.complete)
-        self.clear_button = QtGui.QPushButton("Clear", self)
+
+        self.clear_action = QtGui.QAction("Löschen", self)
+        self.clear_action.setShortcut(QtGui.QKeySequence("Shift+Esc"))
+        self.clear_action.activated.connect(self.clear)
+
+        self.clear_button = QtGui.QPushButton("Löschen", self)
+        self.clear_button.addAction(self.clear_action)
 
         grid = QtGui.QGridLayout(self)
         grid.addWidget(self.call_label, 0, 0)
@@ -272,7 +278,6 @@ class ContestWidget(QtGui.QFrame):
         self.agn_button.clicked.connect(keyer.send_agn)
 
         self.log_button.clicked.connect(self.log)
-        self.clear_button.clicked.connect(self.clear)
 
         self.call_input.textChanged.connect(keyer.set_dx_call)
         self.call_input.textChanged.connect(qso.set_call)
@@ -294,7 +299,6 @@ class ContestWidget(QtGui.QFrame):
         self._shortcut("Ctrl+2", self.exchange_in_input.setFocus)
         self._shortcut("Ctrl+3", self.question_input.setFocus)
         self._shortcut("Ctrl+Enter", self.log)
-        self._shortcut("Shift+Esc", self.clear)
 
     def _shortcut(self, key, action):
         QtGui.QShortcut(QtGui.QKeySequence(key), self).activated.connect(action)
